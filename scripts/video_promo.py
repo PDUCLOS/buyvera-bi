@@ -1,4 +1,4 @@
-"""Vidéo promotionnelle Buyvera BI (vision métier achats) : 1920×1080, 30 i/s, voix off française.
+"""Vidéo promotionnelle Buyvera BI (vision métier achats) : 1920×1080, 30 i/s, sans voix off (VOIX = True pour l'ajouter).
 
 Usage : python scripts/video_promo.py → docs/video/buyvera_promo.mp4
 Prérequis : pip install imageio-ffmpeg ; voix Windows « Microsoft Hortense » (System.Speech).
@@ -269,6 +269,9 @@ SCENES = [
     ("Buyvera BI. Ne subissez plus les hausses : argumentez.", 4.5, s_fin),
 ]
 FONDU = 0.35  # fondu au noir entre scènes, en secondes
+VOIX = False  # True : voix off Windows (Hortense) calée sur chaque scène
+# Durée de lecture de chaque scène sans voix off (secondes)
+DUREES_LECTURE = [4.5, 3.0, 5.5, 4.5, 6.0, 5.0, 7.0, 5.5, 3.5, 5.5, 4.5]
 
 
 def voix(dossier: Path) -> list[Path]:
@@ -294,15 +297,12 @@ def lire_wav(p: Path) -> tuple[np.ndarray, int]:
         return data, w.getframerate()
 
 
-def main() -> None:
-    SORTIE.parent.mkdir(parents=True, exist_ok=True)
-    tmp = Path(tempfile.mkdtemp(prefix="buyvera_video_"))
+def preparer_voix(tmp: Path) -> tuple[list[float], float, list[str]]:
     wavs = voix(tmp)
     pistes = [lire_wav(p) for p in wavs]
     sr = pistes[0][1]
     durees = [max(mini, len(a) / sr + 0.9) for (a, _), (_, mini, _) in zip(pistes, SCENES)]
     total = sum(durees)
-
     # Piste audio : chaque voix démarre 0,3 s après le début de sa scène
     audio = np.zeros(int((total + 0.5) * sr), dtype=np.int16)
     debut = 0.0
@@ -317,11 +317,24 @@ def main() -> None:
         w.setframerate(sr)
         w.writeframes(audio.tobytes())
 
+    return durees, total, ["-i", str(wav_total)]
+
+
+def main() -> None:
+    SORTIE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = Path(tempfile.mkdtemp(prefix="buyvera_video_"))
+    if not VOIX:
+        durees = DUREES_LECTURE
+        total = sum(durees)
+        entree_audio = []
+    else:
+        durees, total, entree_audio = preparer_voix(tmp)
+
     ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
     proc = subprocess.Popen([ffmpeg, "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24",
-                             "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-", "-i", str(wav_total),
+                             "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-", *entree_audio,
                              "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p",
-                             "-c:a", "aac", "-b:a", "160k", "-shortest", "-movflags", "+faststart", str(SORTIE)],
+                             *(["-c:a", "aac", "-b:a", "160k", "-shortest"] if entree_audio else ["-an"]), "-movflags", "+faststart", str(SORTIE)],
                             stdin=subprocess.PIPE)
     vignettes = []
     for n, ((_, _, dessin), d) in enumerate(zip(SCENES, durees)):
