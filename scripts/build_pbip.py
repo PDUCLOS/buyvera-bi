@@ -690,7 +690,7 @@ PAGES = [
                            m("Impact € prochaine campagne"): "Impact €", m("Action fournisseur"): "Action"},
                   "couleur_texte": (m("Action fournisseur"), "Couleur action")}),
         v("tableEx", 680, 155, 580, 545,
-          {"Values": [("c", "dim_article", "designation"), FOURN, m("Volume annuel"), m("Impact € prochaine campagne")]},
+          {"Values": [("c", "dim_article", "designation"), m("Impact € prochaine campagne"), m("Volume annuel"), FOURN]},
           titre="Articles exposés : à partager avec les appros et les commerciaux",
           ordre=(m("Impact € prochaine campagne"), 2),
           objets={"noms": {("c", "dim_article", "designation"): "Article", FOURN: "Fournisseur",
