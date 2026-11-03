@@ -1,0 +1,14 @@
+EVALUATE
+ADDCOLUMNS (
+    VALUES ( dim_fournisseur[nom] ),
+    "statut", [Statut fournisseur],
+    "eco_2pct", [€ économisés (contre-proposition)],
+    "plafond_next", [Plafond justifié prochaine campagne %],
+    "action", [Action fournisseur],
+    "impact_next", [Impact € prochaine campagne],
+    "decalage", [Décalage estimé (mois)],
+    "delai_h", [Délai hausses (mois)],
+    "delai_b", [Délai baisses (mois)],
+    "levier", [Levier matière]
+)
+ORDER BY [eco_2pct] DESC

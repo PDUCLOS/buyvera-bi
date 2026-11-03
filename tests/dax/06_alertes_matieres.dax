@@ -1,0 +1,7 @@
+EVALUATE
+FILTER (
+    ADDCOLUMNS ( VALUES ( dim_matiere[libelle] ),
+        "indice", [Dernier indice], "v3m", [Variation 3 mois %], "v12m", [Variation 12 mois %],
+        "acquis", [Variation anticipée %], "alerte", [Alerte matière] ),
+    NOT ISBLANK ( [indice] )
+)

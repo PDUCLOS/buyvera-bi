@@ -14,6 +14,12 @@ table _Mesures
 		displayFolder: 9. Paramètres
 		lineageTag: 667b1d97-432d-5068-b444-7e2b1ad54cf7
 
+	/// Décalage d'application retenu (segment param_decalage, 0 mois par défaut).
+	measure 'Décalage mois' = SELECTEDVALUE ( param_decalage[decalage_mois], 0 )
+		formatString: 0
+		displayFolder: 9. Paramètres
+		lineageTag: 3490253b-ac01-59c6-9d46-02bba4cfff05
+
 	/// Période de référence des indices (segment param_fenetre, 6 mois par défaut).
 	measure 'Fenêtre mois' = SELECTEDVALUE ( param_fenetre[mois], 6 )
 		formatString: 0
@@ -24,8 +30,9 @@ table _Mesures
 	measure 'Variation matière %' = ```
 			VAR _cN1 = [Campagne N+1]
 			VAR _w = [Fenêtre mois]
-			VAR _fin1 = DATE ( _cN1, 1, 1 )
-			VAR _fin0 = DATE ( _cN1 - 1, 1, 1 )
+			VAR _lag = [Décalage mois]
+			VAR _fin1 = EDATE ( DATE ( _cN1, 1, 1 ), - _lag )
+			VAR _fin0 = EDATE ( DATE ( _cN1 - 1, 1, 1 ), - _lag )
 			VAR _moy1 =
 			    CALCULATE ( AVERAGE ( fact_indice[valeur_eur] ), REMOVEFILTERS ( dim_date ),
 			        dim_date[date] >= EDATE ( _fin1, - _w ), dim_date[date] < _fin1 )
@@ -287,6 +294,333 @@ table _Mesures
 		formatString: #,0.00 €
 		displayFolder: 5. Détail article
 		lineageTag: 3a2500c9-13f0-5502-b977-365c25b94918
+
+	/// Variation matière limitée aux matières des compositions (sans la série cuivre en €/t).
+	measure 'Variation (composition) %' = IF ( SELECTEDVALUE ( dim_matiere[utilisee_composition] ) = TRUE (), [Variation matière %] )
+		formatString: 0.0%
+		displayFolder: 2. Matières
+		lineageTag: 00c27f25-3236-594f-b227-c63b638593b8
+
+	/// Hausse acceptée par l'acheteur (segment du simulateur, 2 % par défaut).
+	measure 'Hausse acceptée %' = DIVIDE ( SELECTEDVALUE ( param_hausse[hausse_acceptee], 2 ), 100 )
+		formatString: 0.0%
+		displayFolder: 6. Négociation
+		lineageTag: 2d7cf76b-3df3-5a62-94f9-67964f0e5105
+
+	/// Σ par article de MAX(0, hausse demandée − hausse acceptée) × prix N × volume N : gain si le fournisseur accepte la contre-proposition.
+	measure '€ économisés (contre-proposition)' = ```
+			VAR _acc = [Hausse acceptée %]
+			VAR _cN1 = [Campagne N+1]
+			VAR _cN = _cN1 - 1
+			VAR _articles =
+			    ADDCOLUMNS (
+			        VALUES ( dim_article[article_id] ),
+			        "@pN", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cN ),
+			        "@pN1", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cN1 ),
+			        "@vN", CALCULATE ( SUM ( fact_achats[quantite] ), REMOVEFILTERS ( dim_date ), dim_date[annee] = _cN )
+			    )
+			VAR _panier = FILTER ( _articles, NOT ISBLANK ( [@pN] ) && NOT ISBLANK ( [@pN1] ) && [@vN] > 0 )
+			RETURN
+			    SUMX ( _panier, MAX ( 0, DIVIDE ( [@pN1], [@pN] ) - 1 - _acc ) * [@pN] * [@vN] )
+			```
+		formatString: #,0 €
+		displayFolder: 6. Négociation
+		lineageTag: c466a434-f02f-5724-b067-3464809f2a55
+
+	/// Couleur de statut de l'écart (rouge > 3 pts, orange > 1 pt, vert sinon) pour la mise en forme conditionnelle.
+	measure 'Couleur écart' = ```
+			VAR _e = [Écart pts]
+			RETURN
+			    SWITCH ( TRUE (), ISBLANK ( _e ), "#898781", _e > 3, "#d03b3b", _e > 1, "#ec835a", "#0ca30c" )
+			```
+		displayFolder: 6. Négociation
+		lineageTag: 1472148e-db71-5f5d-b684-586dd02c3742
+
+	/// Statut lisible (icône + libellé) : À renégocier, À surveiller ou Conforme.
+	measure 'Statut fournisseur' = ```
+			VAR _e = [Écart pts]
+			RETURN
+			    SWITCH ( TRUE (), ISBLANK ( _e ), BLANK (), _e > 3, "▲ À renégocier", _e > 1, "◆ À surveiller", "● Conforme" )
+			```
+		displayFolder: 6. Négociation
+		lineageTag: 75ca9666-b7f5-5fa4-881f-fe6292191735
+
+	/// Matière du panier du fournisseur qui a le plus baissé sur la fenêtre : argument de négociation.
+	measure 'Levier matière' = ```
+			VAR _t =
+			    FILTER (
+			        ADDCOLUMNS ( VALUES ( dim_matiere[libelle] ), "@v", [Variation matière article %] ),
+			        NOT ISBLANK ( [@v] )
+			    )
+			VAR _min = TOPN ( 1, _t, [@v], ASC )
+			RETURN
+			    IF ( COUNTROWS ( _t ) > 0,
+			        MAXX ( _min, dim_matiere[libelle] & " " & FORMAT ( [@v], "+0.0 %;-0.0 %" ) ) )
+			```
+		displayFolder: 6. Négociation
+		lineageTag: 54cab73d-33eb-5d4b-ad60-31aa24743800
+
+	/// Phrase de synthèse générée pour le fournisseur sélectionné (support de négociation).
+	measure 'Commentaire négociation' = ```
+			VAR _f = SELECTEDVALUE ( dim_fournisseur[nom] )
+			VAR _d = [Hausse demandée %]
+			VAR _j = [Hausse justifiée %]
+			VAR _e = [Écart pts]
+			VAR _eur = [€ renégociables]
+			VAR _lev = [Levier matière]
+			VAR _cli = [Effet cliquet]
+			RETURN
+			    IF ( ISBLANK ( _f ), "Choisissez un fournisseur pour générer sa fiche de négociation.",
+			        _f & " demande " & FORMAT ( _d, "+0.0 %;-0.0 %" ) & " quand les matières n'en justifient que "
+			            & FORMAT ( _j, "+0.0 %;-0.0 %" ) & " (écart " & FORMAT ( _e, "+0.0;-0.0" ) & " pts). "
+			            & IF ( _eur > 0, "Montant à renégocier : " & FORMAT ( _eur, "# ##0 €" ) & ". ", "Hausse conforme aux matières. " )
+			            & IF ( NOT ISBLANK ( _lev ), "Levier : " & _lev & " sur la période. ", "" )
+			            & IF ( _cli > 0, "Effet cliquet sur " & _cli & " campagne(s) : les baisses matières n'ont pas été répercutées.", "" ) )
+			```
+		displayFolder: 6. Négociation
+		lineageTag: e240ea0b-a1c3-5dab-8c4a-a0cb582f02c8
+
+	/// Valeur de l'indice au dernier mois disponible.
+	measure 'Dernier indice' = ```
+			VAR _last = CALCULATE ( MAX ( fact_indice[date] ), ALL ( fact_indice ) )
+			VAR _compo = SELECTEDVALUE ( dim_matiere[utilisee_composition] ) = TRUE ()
+			VAR _v = CALCULATE ( AVERAGE ( fact_indice[valeur_eur] ), REMOVEFILTERS ( dim_date ), dim_date[date] = _last )
+			RETURN
+			    IF ( HASONEVALUE ( dim_matiere[matiere_id] ) && _compo, _v )
+			```
+		formatString: #,0.0
+		displayFolder: 7. Alertes
+		lineageTag: 326cb4b0-a8af-58f5-b9ef-60813dfc49c3
+
+	/// Dernier indice / indice 3 mois plus tôt − 1 (signal court terme).
+	measure 'Variation 3 mois %' = ```
+			VAR _last = CALCULATE ( MAX ( fact_indice[date] ), ALL ( fact_indice ) )
+			VAR _compo = SELECTEDVALUE ( dim_matiere[utilisee_composition] ) = TRUE ()
+			VAR _v1 = CALCULATE ( AVERAGE ( fact_indice[valeur_eur] ), REMOVEFILTERS ( dim_date ), dim_date[date] = _last )
+			VAR _v0 = CALCULATE ( AVERAGE ( fact_indice[valeur_eur] ), REMOVEFILTERS ( dim_date ), dim_date[date] = EDATE ( _last, -3 ) )
+			VAR _r = DIVIDE ( _v1, _v0 )
+			RETURN
+			    IF ( HASONEVALUE ( dim_matiere[matiere_id] ) && _compo && NOT ISBLANK ( _r ), _r - 1 )
+			```
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: 7. Alertes
+		lineageTag: c2772821-bcc4-515a-a8d2-10879f94726a
+
+	/// Dernier indice / indice 12 mois plus tôt − 1 (tendance).
+	measure 'Variation 12 mois %' = ```
+			VAR _last = CALCULATE ( MAX ( fact_indice[date] ), ALL ( fact_indice ) )
+			VAR _compo = SELECTEDVALUE ( dim_matiere[utilisee_composition] ) = TRUE ()
+			VAR _v1 = CALCULATE ( AVERAGE ( fact_indice[valeur_eur] ), REMOVEFILTERS ( dim_date ), dim_date[date] = _last )
+			VAR _v0 = CALCULATE ( AVERAGE ( fact_indice[valeur_eur] ), REMOVEFILTERS ( dim_date ), dim_date[date] = EDATE ( _last, -12 ) )
+			VAR _r = DIVIDE ( _v1, _v0 )
+			RETURN
+			    IF ( HASONEVALUE ( dim_matiere[matiere_id] ) && _compo && NOT ISBLANK ( _r ), _r - 1 )
+			```
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: 7. Alertes
+		lineageTag: 97bb800a-ac19-5733-ba34-dd5e5b030947
+
+	/// Signal sur 3 mois : ▲ hausse > 5 % (le fournisseur va s'en servir), ▼ baisse > 5 % (levier acheteur), ● stable.
+	measure 'Alerte matière' = ```
+			VAR _v = [Variation 3 mois %]
+			RETURN
+			    SWITCH ( TRUE (), ISBLANK ( _v ), BLANK (), _v > 0.05, "▲ Hausse : à anticiper", _v < -0.05, "▼ Baisse : convoquer le commercial", "● Stable" )
+			```
+		displayFolder: 7. Alertes
+		lineageTag: f66f27ac-300f-5ae5-87e4-443967d9b651
+
+	/// Couleur du signal matière (rouge = hausse, vert = baisse, gris = stable).
+	measure 'Couleur alerte' = ```
+			VAR _v = [Variation 3 mois %]
+			RETURN
+			    SWITCH ( TRUE (), ISBLANK ( _v ), "#898781", _v > 0.05, "#d03b3b", _v < -0.05, "#0ca30c", "#898781" )
+			```
+		displayFolder: 7. Alertes
+		lineageTag: 94b0a706-6259-5c22-94d4-1175caabfd98
+
+	/// Moyenne des 6 derniers mois disponibles / moyenne des 6 mois avant la dernière campagne − 1 : variation déjà acquise pour la prochaine campagne.
+	measure 'Variation anticipée %' = ```
+			VAR _last = CALCULATE ( MAX ( fact_indice[date] ), ALL ( fact_indice ) )
+			VAR _compo = SELECTEDVALUE ( dim_matiere[utilisee_composition] ) = TRUE ()
+			VAR _cBase = MAXX ( ALL ( param_campagne[campagne] ), param_campagne[campagne] )
+			VAR _fin0 = DATE ( _cBase, 1, 1 )
+			VAR _moy1 = CALCULATE ( AVERAGE ( fact_indice[valeur_eur] ), REMOVEFILTERS ( dim_date ),
+			    dim_date[date] > EDATE ( _last, -6 ), dim_date[date] <= _last )
+			VAR _moy0 = CALCULATE ( AVERAGE ( fact_indice[valeur_eur] ), REMOVEFILTERS ( dim_date ),
+			    dim_date[date] >= EDATE ( _fin0, -6 ), dim_date[date] < _fin0 )
+			VAR _r = DIVIDE ( _moy1, _moy0 )
+			RETURN
+			    IF ( HASONEVALUE ( dim_matiere[matiere_id] ) && _compo && NOT ISBLANK ( _r ), _r - 1 )
+			```
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: 7. Alertes
+		lineageTag: cede5820-fd9e-520a-b229-069f35093b86
+
+	/// Hausse que les matières justifient déjà pour la prochaine campagne, sur le tarif en vigueur pondéré par les volumes : au-delà, la demande est contestable.
+	measure 'Plafond justifié prochaine campagne %' = ```
+			VAR _cBase = MAXX ( ALL ( param_campagne[campagne] ), param_campagne[campagne] )
+			VAR _variations =
+			    CALCULATETABLE (
+			        ADDCOLUMNS ( VALUES ( dim_matiere[matiere_id] ), "@var", [Variation anticipée %] ),
+			        REMOVEFILTERS ( dim_matiere )
+			    )
+			VAR _articles =
+			    ADDCOLUMNS (
+			        VALUES ( dim_article[article_id] ),
+			        "@p", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cBase ),
+			        "@v", CALCULATE ( SUM ( fact_achats[quantite] ), REMOVEFILTERS ( dim_date ), dim_date[annee] = _cBase - 1 )
+			    )
+			VAR _panier = FILTER ( _articles, NOT ISBLANK ( [@p] ) && [@v] > 0 )
+			VAR _panierJ =
+			    ADDCOLUMNS (
+			        _panier,
+			        "@j",
+			            SUMX (
+			                CALCULATETABLE ( bridge_composition, REMOVEFILTERS ( dim_matiere ) ),
+			                VAR _m = bridge_composition[matiere_id]
+			                RETURN bridge_composition[part] * MAXX ( FILTER ( _variations, dim_matiere[matiere_id] = _m ), [@var] )
+			            )
+			    )
+			RETURN
+			    DIVIDE ( SUMX ( _panierJ, [@j] * [@p] * [@v] ), SUMX ( _panierJ, [@p] * [@v] ) )
+			```
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: 7. Alertes
+		lineageTag: f002e442-3d2a-5f49-b9ca-f4687f0bf0c3
+
+	/// Surcoût que les matières justifient déjà pour la prochaine campagne (Σ part × variation acquise × prix × volume). Si une matière est sélectionnée, seule sa contribution est comptée : articles impactés par cette matière.
+	measure 'Impact € prochaine campagne' = ```
+			VAR _cBase = MAXX ( ALL ( param_campagne[campagne] ), param_campagne[campagne] )
+			VAR _variations =
+			    CALCULATETABLE (
+			        ADDCOLUMNS ( VALUES ( dim_matiere[matiere_id] ), "@var", [Variation anticipée %] ),
+			        REMOVEFILTERS ( dim_matiere )
+			    )
+			VAR _articles =
+			    ADDCOLUMNS (
+			        VALUES ( dim_article[article_id] ),
+			        "@p", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cBase ),
+			        "@v", CALCULATE ( SUM ( fact_achats[quantite] ), REMOVEFILTERS ( dim_date ), dim_date[annee] = _cBase - 1 )
+			    )
+			VAR _panier = FILTER ( _articles, NOT ISBLANK ( [@p] ) && [@v] > 0 )
+			VAR _impact =
+			    SUMX (
+			        _panier,
+			        [@p] * [@v]
+			            * SUMX (
+			                CALCULATETABLE ( bridge_composition ),
+			                VAR _m = bridge_composition[matiere_id]
+			                RETURN bridge_composition[part] * MAXX ( FILTER ( _variations, dim_matiere[matiere_id] = _m ), [@var] )
+			            )
+			    )
+			RETURN
+			    IF ( _impact <> 0, _impact )
+			```
+		formatString: #,0 €
+		displayFolder: 7. Alertes
+		lineageTag: e8d0abf7-7b16-509d-841e-dee564afde07
+
+	/// Quantité achetée sur la dernière année complète.
+	measure 'Volume annuel' = ```
+			VAR _cBase = MAXX ( ALL ( param_campagne[campagne] ), param_campagne[campagne] )
+			RETURN
+			    CALCULATE ( SUM ( fact_achats[quantite] ), REMOVEFILTERS ( dim_date ), dim_date[annee] = _cBase - 1 )
+			```
+		formatString: #,0
+		displayFolder: 7. Alertes
+		lineageTag: 564885b6-6f55-59dd-9e3e-028c55b1b998
+
+	/// Action recommandée selon le plafond justifié de la prochaine campagne : baisse → convoquer le commercial du fournisseur, hausse > 2 % → préparer la défense, sinon suivi.
+	measure 'Action fournisseur' = ```
+			VAR _p = [Plafond justifié prochaine campagne %]
+			RETURN
+			    SWITCH ( TRUE (), ISBLANK ( _p ), BLANK (),
+			        _p < 0, "▼ Convoquer le commercial : baisse à obtenir",
+			        _p > 0.02, "▲ Préparer la défense : hausse à cadrer",
+			        "● Suivi : hausse limitée" )
+			```
+		displayFolder: 7. Alertes
+		lineageTag: 2af1133a-157a-53d9-9be0-d8be6ad9cf46
+
+	/// Vert = baisse à obtenir, rouge = hausse à cadrer, gris = suivi.
+	measure 'Couleur action' = ```
+			VAR _p = [Plafond justifié prochaine campagne %]
+			RETURN
+			    SWITCH ( TRUE (), ISBLANK ( _p ), "#898781", _p < 0, "#0ca30c", _p > 0.02, "#d03b3b", "#898781" )
+			```
+		displayFolder: 7. Alertes
+		lineageTag: 0d4af545-fdcd-54c9-aa59-fe646b8f2dd9
+
+	/// Décalage d'application qui explique le mieux la hausse demandée (écart minimal entre demandé et justifié) : mesure le retard de répercussion du fournisseur.
+	measure 'Décalage estimé (mois)' = ```
+			VAR _t = ADDCOLUMNS ( ALL ( param_decalage[decalage_mois] ), "@e", ABS ( [Écart pts] ) )
+			VAR _best = TOPN ( 1, FILTER ( _t, NOT ISBLANK ( [@e] ) ), [@e], ASC, param_decalage[decalage_mois], ASC )
+			RETURN
+			    MAXX ( _best, param_decalage[decalage_mois] )
+			```
+		formatString: 0 "mois"
+		displayFolder: 8. Décalage
+		lineageTag: 41b03e17-2c0f-5809-94dc-c8a20bb4f370
+
+	/// Décalage moyen de répercussion sur les campagnes où les matières montent.
+	measure 'Délai hausses (mois)' = ```
+			AVERAGEX (
+			    FILTER ( ALL ( param_campagne[campagne] ), [Hausse justifiée %] > 0 ),
+			    [Décalage estimé (mois)]
+			)
+			```
+		formatString: 0.0
+		displayFolder: 8. Décalage
+		lineageTag: c1babc94-f58d-5a43-b02a-63edf0a00afa
+
+	/// Décalage moyen de répercussion sur les campagnes où les matières baissent (12 = baisse jamais vraiment répercutée).
+	measure 'Délai baisses (mois)' = ```
+			AVERAGEX (
+			    FILTER ( ALL ( param_campagne[campagne] ), [Hausse justifiée %] < 0 ),
+			    [Décalage estimé (mois)]
+			)
+			```
+		formatString: 0.0
+		displayFolder: 8. Décalage
+		lineageTag: 53c3a91c-7f1a-5c3b-aaa4-98581dede23f
+
+	/// Délai baisses − délai hausses : positif = le fournisseur répercute les hausses plus vite que les baisses.
+	measure 'Asymétrie (mois)' = ```
+			VAR _h = [Délai hausses (mois)]
+			VAR _b = [Délai baisses (mois)]
+			RETURN
+			    IF ( NOT ISBLANK ( _h ) && NOT ISBLANK ( _b ), _b - _h )
+			```
+		formatString: +0.0;-0.0;0.0
+		displayFolder: 8. Décalage
+		lineageTag: 71f07562-4ba5-5251-9c0d-e09eb35382bf
+
+	/// Écart (pts) restant une fois le décalage du fournisseur pris en compte : ce qui reste n'est pas expliqué par les matières.
+	measure 'Écart au meilleur décalage' = ```
+			VAR _lag = [Décalage estimé (mois)]
+			RETURN
+			    CALCULATE ( [Écart pts], param_decalage[decalage_mois] = _lag )
+			```
+		formatString: +0.0;-0.0;0.0
+		displayFolder: 8. Décalage
+		lineageTag: 527361da-60ce-5bd0-b539-1e652833a3cc
+
+	/// Campagne à venir (dernière campagne + 1).
+	measure 'Prochaine campagne' = MAXX ( ALL ( param_campagne[campagne] ), param_campagne[campagne] ) + 1
+		formatString: 0
+		displayFolder: 7. Alertes
+		lineageTag: a86a3e75-4988-5f18-9f4d-e51378051d2e
+
+	/// Phrase d'anticipation : plafond de hausse défendable pour la prochaine campagne, avant réception du tarif.
+	measure 'Argument anticipé' = ```
+			VAR _f = SELECTEDVALUE ( dim_fournisseur[nom], "l'ensemble des fournisseurs" )
+			VAR _p = [Plafond justifié prochaine campagne %]
+			RETURN
+			    "Campagne " & [Prochaine campagne] & " : les matières justifient déjà " & FORMAT ( _p, "+0.0 %;-0.0 %" )
+			        & " pour " & _f & ". Au-delà, la demande est à contester."
+			```
+		displayFolder: 7. Alertes
+		lineageTag: 944a7d6e-558f-5416-8171-5f18e67c25f4
 
 	/// Libellé du dernier mois d'indice INSEE disponible (fraîcheur).
 	measure 'Dernier indice chargé' = ```

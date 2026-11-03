@@ -24,6 +24,8 @@ ref table fact_tarif
 ref table fact_achats
 ref table fact_indice
 ref table param_campagne
+ref table param_hausse
+ref table param_decalage
 ref table param_fenetre
 ref table _Mesures
 

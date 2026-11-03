@@ -1,0 +1,20 @@
+/// Simulateur : hausse que l'acheteur est prêt à accepter (en %), pour chiffrer la contre-proposition.
+table param_hausse
+	lineageTag: cbbc0e2e-54c9-59fd-98e9-7ac2ca15442f
+
+	/// Simulateur : hausse que l'acheteur est prêt à accepter (en %), pour chiffrer la contre-proposition.
+	column hausse_acceptee
+		dataType: int64
+		formatString: 0
+		lineageTag: 8a334fa2-6082-5986-bdac-921a50abc4fc
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [hausse_acceptee]
+
+		annotation SummarizationSetBy = User
+
+	partition param_hausse = calculated
+		mode: import
+		source = DATATABLE ( "hausse_acceptee", INTEGER, { { 0 }, { 1 }, { 2 }, { 3 }, { 4 }, { 5 } } )
+
+	annotation PBI_Id = 9d0a535994be5fa985b3bc18d5b8085d

@@ -1,45 +1,41 @@
 {
   "name": "Buyvera",
   "dataColors": [
-    "#0F766E",
-    "#F59E0B",
-    "#2563EB",
-    "#DC2626",
-    "#7C3AED",
-    "#059669",
-    "#DB2777",
-    "#64748B",
-    "#0EA5E9",
-    "#84CC16",
-    "#F97316",
-    "#A855F7"
+    "#2a78d6",
+    "#eb6834",
+    "#1baf7a",
+    "#eda100",
+    "#e87ba4",
+    "#008300",
+    "#6250d6",
+    "#e34948"
   ],
   "background": "#FFFFFF",
-  "foreground": "#0F172A",
-  "tableAccent": "#0F766E",
-  "good": "#059669",
-  "neutral": "#F59E0B",
-  "bad": "#DC2626",
+  "foreground": "#0b0b0b",
+  "tableAccent": "#2a78d6",
+  "good": "#0ca30c",
+  "neutral": "#fab219",
+  "bad": "#d03b3b",
   "textClasses": {
     "title": {
       "fontFace": "Segoe UI Semibold",
       "fontSize": 11,
-      "color": "#334155"
+      "color": "#0b0b0b"
     },
     "label": {
       "fontFace": "Segoe UI",
       "fontSize": 9,
-      "color": "#475569"
+      "color": "#52514e"
     },
     "callout": {
       "fontFace": "Segoe UI Semibold",
       "fontSize": 26,
-      "color": "#0F172A"
+      "color": "#0b0b0b"
     },
     "header": {
       "fontFace": "Segoe UI Semibold",
       "fontSize": 10,
-      "color": "#334155"
+      "color": "#52514e"
     }
   },
   "visualStyles": {
@@ -61,7 +57,7 @@
             "show": true,
             "color": {
               "solid": {
-                "color": "#E2E8F0"
+                "color": "#E5E7EB"
               }
             },
             "radius": 12
@@ -75,11 +71,11 @@
                 "color": "#0F172A"
               }
             },
-            "transparency": 88,
+            "transparency": 92,
             "position": "Outer",
-            "preset": "BottomRight",
-            "shadowBlur": 10,
-            "shadowDistance": 2
+            "preset": "Bottom",
+            "shadowBlur": 8,
+            "shadowDistance": 1
           }
         ],
         "padding": [
@@ -95,10 +91,59 @@
             "show": true,
             "fontColor": {
               "solid": {
-                "color": "#334155"
+                "color": "#0b0b0b"
               }
             },
-            "fontSize": 11
+            "fontSize": 11,
+            "fontFamily": "Segoe UI Semibold"
+          }
+        ],
+        "categoryAxis": [
+          {
+            "labelColor": {
+              "solid": {
+                "color": "#52514e"
+              }
+            },
+            "gridlineShow": false,
+            "innerPadding": 35
+          }
+        ],
+        "valueAxis": [
+          {
+            "labelColor": {
+              "solid": {
+                "color": "#898781"
+              }
+            },
+            "gridlineColor": {
+              "solid": {
+                "color": "#e1e0d9"
+              }
+            },
+            "gridlineStyle": "solid",
+            "gridlineThickness": 1
+          }
+        ],
+        "labels": [
+          {
+            "color": {
+              "solid": {
+                "color": "#52514e"
+              }
+            },
+            "fontSize": 9,
+            "labelPosition": "OutsideEnd"
+          }
+        ],
+        "legend": [
+          {
+            "labelColor": {
+              "solid": {
+                "color": "#52514e"
+              }
+            },
+            "position": "Top"
           }
         ]
       }
@@ -109,7 +154,7 @@
           {
             "color": {
               "solid": {
-                "color": "#F1F5F9"
+                "color": "#F4F5F7"
               }
             },
             "transparency": 0
@@ -119,7 +164,7 @@
           {
             "color": {
               "solid": {
-                "color": "#F1F5F9"
+                "color": "#F4F5F7"
               }
             },
             "transparency": 0
@@ -230,7 +275,7 @@
             "gridHorizontal": true,
             "gridHorizontalColor": {
               "solid": {
-                "color": "#E2E8F0"
+                "color": "#E5E7EB"
               }
             },
             "rowPadding": 3
@@ -267,10 +312,19 @@
           {
             "fontColor": {
               "solid": {
-                "color": "#64748B"
+                "color": "#52514e"
               }
             },
             "textSize": 9
+          }
+        ],
+        "items": [
+          {
+            "fontColor": {
+              "solid": {
+                "color": "#0b0b0b"
+              }
+            }
           }
         ]
       }
@@ -281,9 +335,24 @@
           {
             "color": {
               "solid": {
-                "color": "#0F172A"
+                "color": "#0b0b0b"
               }
-            }
+            },
+            "fontSize": 24
+          }
+        ],
+        "categoryLabels": [
+          {
+            "show": false
+          }
+        ]
+      }
+    },
+    "lineChart": {
+      "*": {
+        "lineStyles": [
+          {
+            "strokeWidth": 2
           }
         ]
       }

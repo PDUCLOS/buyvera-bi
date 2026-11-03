@@ -1,0 +1,20 @@
+/// Décalage d'application : nombre de mois entre l'évolution du cours matière et sa répercussion dans le tarif.
+table param_decalage
+	lineageTag: b5627dd8-ae41-5ec5-8a5b-3b8d9053bfbe
+
+	/// Décalage d'application : nombre de mois entre l'évolution du cours matière et sa répercussion dans le tarif.
+	column decalage_mois
+		dataType: int64
+		formatString: 0
+		lineageTag: df22542b-40fc-5bba-99fd-0691fac72d0f
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [decalage_mois]
+
+		annotation SummarizationSetBy = User
+
+	partition param_decalage = calculated
+		mode: import
+		source = DATATABLE ( "decalage_mois", INTEGER, { { 0 }, { 3 }, { 6 }, { 9 }, { 12 } } )
+
+	annotation PBI_Id = fb3d7037363f5b70a71ec0e53c7e324b
