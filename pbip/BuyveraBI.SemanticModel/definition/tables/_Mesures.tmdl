@@ -258,6 +258,36 @@ table _Mesures
 		displayFolder: 4. Rattachement
 		lineageTag: a9db232c-ce64-5fe7-9630-96725502defc
 
+	/// Indice moyen limité aux matières utilisées dans les compositions (exclut le cuivre en €/t).
+	measure 'Indice (composition)' = CALCULATE ( [Indice moyen], KEEPFILTERS ( dim_matiere[utilisee_composition] = TRUE () ) )
+		formatString: #,0.0
+		displayFolder: 2. Matières
+		lineageTag: 847fd202-c0aa-52c2-a905-26b5ba10d1a7
+
+	/// Indice moyen des seules matières présentes dans la composition des articles filtrés.
+	measure 'Indice matières article' = ```
+			CALCULATE (
+			    [Indice moyen],
+			    KEEPFILTERS ( TREATAS ( VALUES ( bridge_composition[matiere_id] ), dim_matiere[matiere_id] ) ),
+			    KEEPFILTERS ( dim_matiere[utilisee_composition] = TRUE () )
+			)
+			```
+		formatString: #,0.0
+		displayFolder: 5. Détail article
+		lineageTag: a876ef35-6a1d-5ac8-8735-ce2b43e6c63e
+
+	/// Variation matière affichée seulement pour les matières de la composition des articles filtrés.
+	measure 'Variation matière article %' = IF ( NOT ISBLANK ( [Part matière moyenne] ), [Variation matière %] )
+		formatString: 0.0%
+		displayFolder: 5. Détail article
+		lineageTag: 9dba649c-e56f-5df8-ba53-f2f653ea576b
+
+	/// Prix brut public (somme sur les articles filtrés).
+	measure 'Prix brut' = SUM ( fact_tarif[prix_brut] )
+		formatString: #,0.00 €
+		displayFolder: 5. Détail article
+		lineageTag: 3a2500c9-13f0-5502-b977-365c25b94918
+
 	/// Libellé du dernier mois d'indice INSEE disponible (fraîcheur).
 	measure 'Dernier indice chargé' = ```
 			VAR _d = CALCULATE ( MAX ( fact_indice[date] ), REMOVEFILTERS ( fact_indice ), REMOVEFILTERS ( dim_date ) )

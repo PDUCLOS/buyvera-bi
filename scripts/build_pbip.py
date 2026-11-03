@@ -291,6 +291,22 @@ RETURN
     ("Objectif rattachement", "4. Rattachement", "0%", "Objectif de rattachement automatique (règle Buyvera).",
      "0.8"),
 
+    ("Indice (composition)", "2. Matières", "#,0.0",
+     "Indice moyen limité aux matières utilisées dans les compositions (exclut le cuivre en €/t).",
+     "CALCULATE ( [Indice moyen], KEEPFILTERS ( dim_matiere[utilisee_composition] = TRUE () ) )"),
+    ("Indice matières article", "5. Détail article", "#,0.0",
+     "Indice moyen des seules matières présentes dans la composition des articles filtrés.",
+     """CALCULATE (
+    [Indice moyen],
+    KEEPFILTERS ( TREATAS ( VALUES ( bridge_composition[matiere_id] ), dim_matiere[matiere_id] ) ),
+    KEEPFILTERS ( dim_matiere[utilisee_composition] = TRUE () )
+)"""),
+    ("Variation matière article %", "5. Détail article", "0.0%",
+     "Variation matière affichée seulement pour les matières de la composition des articles filtrés.",
+     "IF ( NOT ISBLANK ( [Part matière moyenne] ), [Variation matière %] )"),
+    ("Prix brut", "5. Détail article", "#,0.00 €", "Prix brut public (somme sur les articles filtrés).",
+     "SUM ( fact_tarif[prix_brut] )"),
+
     ("Dernier indice chargé", "2. Matières", "", "Libellé du dernier mois d'indice INSEE disponible (fraîcheur).",
      """VAR _d = CALCULATE ( MAX ( fact_indice[date] ), REMOVEFILTERS ( fact_indice ), REMOVEFILTERS ( dim_date ) )
 RETURN
@@ -303,7 +319,112 @@ ROLES = {
     "Direction": ("Direction : voit tout (aucun filtre).", {}),
 }
 
-PAGES = ["Synthèse campagne", "Fournisseurs", "Détail article", "Matières", "Rattachement"]
+# --------------------------------------------------------------------------------------
+# Rapport : pages et visuels (format report.json). Champ : ("m", mesure) ou ("c", table, colonne)
+# --------------------------------------------------------------------------------------
+CAMPAGNE = ("c", "param_campagne", "campagne")
+FOURN = ("c", "dim_fournisseur", "nom")
+
+
+def m(nom: str) -> tuple:
+    return ("m", nom)
+
+
+def v(typ, x, y, w, h, roles=None, titre=None, ordre=None, objets=None, filtres=None, texte=None):
+    return dict(typ=typ, x=x, y=y, w=w, h=h, roles=roles or {}, titre=titre, ordre=ordre,
+                objets=objets or {}, filtres=filtres or [], texte=texte)
+
+
+def entete(titre: str, sous_titre: str) -> list[dict]:
+    return [v("textbox", 20, 10, 860, 60, texte=(titre, sous_titre)),
+            v("card", 900, 14, 360, 52, {"Values": [m("Dernier indice chargé")]})]
+
+
+def segment(champ, x, y, w=200, h=56, titre=None):
+    return v("slicer", x, y, w, h, {"Values": [champ]}, titre=titre, objets={"dropdown": True})
+
+
+KPI_CAMPAGNE = [
+    v("card", 20 + i * 250, 150, 235, 100, {"Values": [m(n)]}, titre=n)
+    for i, n in enumerate(["Hausse demandée %", "Hausse justifiée %", "Écart pts", "€ renégociables", "Valeur N"])
+]
+
+PAGES = [
+    ("Synthèse campagne", entete(
+        "Cette hausse fournisseur est-elle justifiée ?",
+        "Hausse demandée vs hausse justifiée par l'évolution réelle des matières (INSEE). Tarifs et volumes fictifs.") + [
+        segment(CAMPAGNE, 20, 80, titre="Campagne analysée (N+1)"),
+        segment(("c", "dim_famille", "univers"), 240, 80, titre="Univers"),
+        *KPI_CAMPAGNE,
+        v("clusteredBarChart", 20, 270, 620, 430, {"Category": [FOURN], "Y": [m("€ renégociables")]},
+          titre="€ renégociables par fournisseur", ordre=(m("€ renégociables"), 2), objets={"labels": True}),
+        v("clusteredBarChart", 660, 270, 600, 430, {"Category": [("c", "dim_famille", "libelle")], "Y": [m("Écart pts")]},
+          titre="Écart (pts) par famille", ordre=(m("Écart pts"), 2), objets={"labels": True}),
+    ]),
+    ("Fournisseurs", entete(
+        "Fournisseurs : demandé vs justifié",
+        "Au-dessus de la diagonale : la hausse demandée dépasse ce que les matières expliquent. Taille = valeur achetée N.") + [
+        segment(CAMPAGNE, 20, 80, titre="Campagne analysée (N+1)"),
+        segment(("c", "dim_famille", "univers"), 240, 80, titre="Univers"),
+        v("scatterChart", 20, 150, 640, 550,
+          {"Category": [FOURN], "X": [m("Hausse justifiée %")], "Y": [m("Hausse demandée %")], "Size": [m("Valeur N")]},
+          titre="Hausse demandée × hausse justifiée", objets={"labels": True}),
+        v("tableEx", 680, 150, 580, 550,
+          {"Values": [FOURN, m("Hausse demandée %"), m("Hausse justifiée %"), m("Écart pts"),
+                      m("€ renégociables"), m("Effet cliquet")]},
+          titre="Classement des fournisseurs", ordre=(m("€ renégociables"), 2)),
+    ]),
+    ("Détail article", entete(
+        "Détail article",
+        "Composition matière, évolution des indices de ses matières et historique de prix sur 4 campagnes.") + [
+        segment(FOURN, 20, 80, w=240, titre="Fournisseur"),
+        segment(("c", "dim_article", "designation"), 280, 80, w=420, titre="Article"),
+        segment(CAMPAGNE, 720, 80, titre="Campagne analysée (N+1)"),
+        v("card", 20, 150, 200, 90, {"Values": [m("Hausse demandée %")]}, titre="Hausse demandée %"),
+        v("card", 230, 150, 200, 90, {"Values": [m("Hausse justifiée %")]}, titre="Hausse justifiée %"),
+        v("card", 440, 150, 200, 90, {"Values": [m("Écart pts")]}, titre="Écart pts"),
+        v("tableEx", 20, 255, 620, 220,
+          {"Values": [("c", "dim_matiere", "libelle"), m("Part matière moyenne"), m("Variation matière article %")]},
+          titre="Composition et variation matière", ordre=(m("Part matière moyenne"), 2)),
+        v("tableEx", 20, 490, 620, 210, {"Values": [("c", "fact_tarif", "campagne"), m("Prix brut")]},
+          titre="Historique du prix brut", ordre=(("c", "fact_tarif", "campagne"), 1)),
+        v("lineChart", 660, 150, 600, 550,
+          {"Category": [("c", "dim_date", "annee_mois")], "Series": [("c", "dim_matiere", "libelle")],
+           "Y": [m("Indice matières article")]},
+          titre="Indices des matières de l'article (base 2010, €)", ordre=(("c", "dim_date", "annee_mois"), 1)),
+    ]),
+    ("Matières", entete(
+        "Matières premières",
+        "Indices INSEE mensuels en euros. La variation compare la moyenne de la fenêtre avant N+1 à celle avant N.") + [
+        segment(CAMPAGNE, 20, 80, titre="Campagne analysée (N+1)"),
+        segment(("c", "param_fenetre", "mois"), 240, 80, titre="Fenêtre de référence (mois)"),
+        v("lineChart", 20, 150, 800, 550,
+          {"Category": [("c", "dim_date", "annee_mois")], "Series": [("c", "dim_matiere", "libelle")],
+           "Y": [m("Indice (composition)")]},
+          titre="Indices matières (base 2010, en €)", ordre=(("c", "dim_date", "annee_mois"), 1)),
+        v("clusteredBarChart", 840, 150, 420, 550,
+          {"Category": [("c", "dim_matiere", "libelle")], "Y": [m("Variation matière %")]},
+          titre="Variation matière sur la fenêtre", ordre=(m("Variation matière %"), 2), objets={"labels": True}),
+    ]),
+    ("Rattachement", entete(
+        "Rattachement des références",
+        "Référence tarif fournisseur vs référence ERP. Objectif : 80 % de rattachement automatique.") + [
+        segment(FOURN, 20, 80, w=240, titre="Fournisseur"),
+        v("card", 20, 150, 300, 100, {"Values": [m("% rattachés auto")]}, titre="Rattachement automatique"),
+        v("card", 335, 150, 300, 100, {"Values": [m("% proposés")]}, titre="Proposé (à valider)"),
+        v("card", 650, 150, 300, 100, {"Values": [m("% non rattachés")]}, titre="Non rattaché"),
+        v("card", 965, 150, 295, 100, {"Values": [m("Objectif rattachement")]}, titre="Objectif"),
+        v("tableEx", 20, 270, 460, 430,
+          {"Values": [FOURN, m("Nb articles"), m("% rattachés auto"), m("% proposés"), m("% non rattachés")]},
+          titre="Taux par fournisseur", ordre=(m("% rattachés auto"), 1)),
+        v("tableEx", 500, 270, 760, 430,
+          {"Values": [("c", "dim_article", "statut_rattachement"), ("c", "dim_article", "ref_fournisseur"),
+                      ("c", "dim_article", "designation_tarif"), ("c", "dim_article", "ref_erp"),
+                      ("c", "dim_article", "designation"), ("c", "dim_article", "score_rattachement")]},
+          titre="Articles à valider", ordre=(("c", "dim_article", "score_rattachement"), 2),
+          filtres=[(("c", "dim_article", "statut_rattachement"), ["Proposé", "Non rattaché"])]),
+    ]),
+]
 
 
 # --------------------------------------------------------------------------------------
@@ -404,6 +525,97 @@ def table_mesures() -> str:
     return "\n".join(l)
 
 
+def lit(valeur) -> dict:
+    """Littéral de requête Power BI (texte entre apostrophes, booléen, nombre suivi de D/L)."""
+    if isinstance(valeur, bool):
+        txt = "true" if valeur else "false"
+    elif isinstance(valeur, str):
+        txt = "'" + valeur.replace("'", "''") + "'"
+    else:
+        txt = f"{valeur}D"
+    return {"expr": {"Literal": {"Value": txt}}}
+
+
+class Requete:
+    """Construit le prototypeQuery d'un visuel (alias de tables, champs sélectionnés)."""
+
+    def __init__(self) -> None:
+        self.alias: dict[str, str] = {}
+
+    def source(self, table: str) -> dict:
+        if table not in self.alias:
+            self.alias[table] = f"t{len(self.alias)}"
+        return {"SourceRef": {"Source": self.alias[table]}}
+
+    def expr(self, champ: tuple) -> dict:
+        if champ[0] == "m":
+            return {"Measure": {"Expression": self.source("_Mesures"), "Property": champ[1]}}
+        return {"Column": {"Expression": self.source(champ[1]), "Property": champ[2]}}
+
+    @staticmethod
+    def ref(champ: tuple) -> str:
+        return f"_Mesures.{champ[1]}" if champ[0] == "m" else f"{champ[1]}.{champ[2]}"
+
+    def frm(self) -> list[dict]:
+        return [{"Name": a, "Entity": t, "Type": 0} for t, a in self.alias.items()]
+
+
+def visuel(page: int, i: int, d: dict) -> dict:
+    nom = tag("visuel", str(page), str(i)).replace("-", "")[:20]
+    pos = {"x": d["x"], "y": d["y"], "z": i * 1000, "width": d["w"], "height": d["h"]}
+    sv: dict = {"visualType": d["typ"], "drillFilterOtherVisuals": True}
+    vc: dict = {}
+    if d["typ"] == "textbox":
+        titre, sous = d["texte"]
+        sv["objects"] = {"general": [{"properties": {"paragraphs": [
+            {"textRuns": [{"value": titre, "textStyle": {"fontWeight": "bold", "fontSize": "20pt"}}]},
+            {"textRuns": [{"value": sous, "textStyle": {"fontSize": "11pt", "color": "#605E5C"}}]}]}}]}
+    else:
+        q = Requete()
+        select, proj = [], {}
+        for role, champs in d["roles"].items():
+            proj[role] = []
+            for c in champs:
+                ref = q.ref(c)
+                if ref not in [s["Name"] for s in select]:
+                    select.append({**q.expr(c), "Name": ref, "NativeReferenceName": c[-1]})
+                proj[role].append({"queryRef": ref})
+        proto = {"Version": 2, "From": None, "Select": select}
+        if d["ordre"]:
+            proto["OrderBy"] = [{"Direction": d["ordre"][1], "Expression": q.expr(d["ordre"][0])}]
+        proto["From"] = q.frm()
+        sv["projections"] = proj
+        sv["prototypeQuery"] = proto
+        objets: dict = {}
+        if d["objets"].get("labels"):
+            objets["labels"] = [{"properties": {"show": lit(True)}}]
+        if d["objets"].get("dropdown"):
+            objets["data"] = [{"properties": {"mode": lit("Dropdown")}}]
+            objets["selection"] = [{"properties": {"strictSingleSelect": lit(False)}}]
+        if d["typ"] == "card":
+            objets["categoryLabels"] = [{"properties": {"show": lit(False)}}]
+        if objets:
+            sv["objects"] = objets
+        if d["titre"]:
+            vc["title"] = [{"properties": {"show": lit(True), "text": lit(d["titre"])}}]
+    if vc:
+        sv["vcObjects"] = vc
+
+    filtres = []
+    for j, (champ, valeurs) in enumerate(d["filtres"]):
+        fq = Requete()
+        e = fq.expr(champ)
+        filtres.append({
+            "name": f"Filtre{page}{i}{j}",
+            "expression": {"Column": {"Expression": {"SourceRef": {"Entity": champ[1]}}, "Property": champ[2]}},
+            "filter": {"Version": 2, "From": fq.frm(), "Where": [{"Condition": {"In": {
+                "Expressions": [e], "Values": [[{"Literal": lit(x)["expr"]["Literal"]}] for x in valeurs]}}}]},
+            "type": "Categorical", "howCreated": 1})
+    config = {"name": nom, "layouts": [{"id": 0, "position": pos}], "singleVisual": sv}
+    return {"x": d["x"], "y": d["y"], "z": i * 1000, "width": d["w"], "height": d["h"],
+            "config": json.dumps(config, ensure_ascii=False), "filters": json.dumps(filtres, ensure_ascii=False)}
+
+
 def ecrire(chemin: Path, texte: str) -> None:
     chemin.parent.mkdir(parents=True, exist_ok=True)
     chemin.write_text(texte if texte.endswith("\n") else texte + "\n", encoding="utf-8", newline="\n")
@@ -478,11 +690,12 @@ def construire(dossier_donnees: str) -> None:
         "metadata": {"type": "SemanticModel", "displayName": NOM},
         "config": {"version": "2.0", "logicalId": tag("logical", "sm")}})
 
-    # Rapport : format report.json (pages vides, construites au jour 4)
+    # Rapport : format report.json
     sections = [{
         "config": "{}", "displayName": p, "displayOption": 1, "filters": "[]",
         "height": 720.0, "name": f"ReportSection{i:02d}", "ordinal": i,
-        "visualContainers": [], "width": 1280.0} for i, p in enumerate(PAGES)]
+        "visualContainers": [visuel(i, j, d) for j, d in enumerate(visuels)],
+        "width": 1280.0} for i, (p, visuels) in enumerate(PAGES)]
     config = {"version": "5.59", "themeCollection": {}, "activeSectionIndex": 0,
               "defaultDrillFilterOtherVisuals": True, "linguisticSchemaSyncVersion": 0,
               "settings": {"useNewFilterPaneExperience": True, "allowChangeFilterTypes": True,
