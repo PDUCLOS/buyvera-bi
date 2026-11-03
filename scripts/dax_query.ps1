@@ -7,9 +7,15 @@ $ErrorActionPreference = 'Stop'
 $asm = [System.Reflection.Assembly]::LoadFrom('C:\Program Files\Microsoft Power BI Desktop\bin\Microsoft.PowerBI.AdomdClient.dll')
 $typeCn = $asm.GetType('Microsoft.AnalysisServices.AdomdClient.AdomdConnection')
 
-$portFile = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\Power BI Desktop\AnalysisServicesWorkspaces" -Recurse -Filter msmdsrv.port.txt |
-    Sort-Object LastWriteTime -Descending | Select-Object -First 1
-$port = [System.IO.File]::ReadAllText($portFile.FullName, [System.Text.Encoding]::Unicode).Trim()
+# Port du moteur encore en écoute (le plus récent d'abord ; une instance fermée laisse son fichier)
+$ports = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\Power BI Desktop\AnalysisServicesWorkspaces" -Recurse -Filter msmdsrv.port.txt |
+    Sort-Object LastWriteTime -Descending |
+    ForEach-Object { [System.IO.File]::ReadAllText($_.FullName, [System.Text.Encoding]::Unicode).Trim() }
+$port = $ports | Where-Object {
+    $c = New-Object System.Net.Sockets.TcpClient
+    try { $c.Connect('localhost', [int]$_); $true } catch { $false } finally { $c.Close() }
+} | Select-Object -First 1
+if (-not $port) { throw "Aucun moteur Power BI Desktop en ecoute : ouvrir le projet d'abord." }
 
 $cs = "Data Source=localhost:$port"
 if ($Role) { $cs += ";Roles=$Role" }
