@@ -19,7 +19,7 @@ Relevé Power BI : `tests/dax/10_controle_croise.dax`, via `scripts/export_claud
 
 | Critère | Power BI | Tableau de bord Claude |
 |---|---|---|
-| Temps de construction | ~3 jours : modèle TMDL, 60 mesures DAX, 7 pages, précalcul pour la fluidité | ~1 heure à partir des mêmes CSV agrégés |
+| Temps de construction | ~3 jours : modèle TMDL, 53 mesures DAX, 7 pages, précalcul pour la fluidité | ~1 heure à partir des mêmes CSV agrégés |
 | Sécurité par utilisateur (RLS) | oui, native et testée (`docs/rls.md`) | non : un lien = une vue ; il faut un tableau par public |
 | Gouvernance / source unique | modèle sémantique, rafraîchissement planifiable, mesures documentées | instantané des données agrégées, à republier à chaque campagne |
 | Volumétrie | 150 000 lignes de précalcul, 62 000 lignes d'achats en direct | 4 petits fichiers agrégés en amont (3 Ko) |
