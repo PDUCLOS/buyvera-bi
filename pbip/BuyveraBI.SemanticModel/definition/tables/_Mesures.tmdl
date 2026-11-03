@@ -282,8 +282,8 @@ table _Mesures
 		displayFolder: 5. Détail article
 		lineageTag: 9dba649c-e56f-5df8-ba53-f2f653ea576b
 
-	/// Prix brut public (somme sur les articles filtrés).
-	measure 'Prix brut' = SUM ( fact_tarif[prix_brut] )
+	/// Prix brut public, affiché quand un seul article est sélectionné.
+	measure 'Prix brut' = IF ( HASONEVALUE ( dim_article[article_id] ), SUM ( fact_tarif[prix_brut] ) )
 		formatString: #,0.00 €
 		displayFolder: 5. Détail article
 		lineageTag: 3a2500c9-13f0-5502-b977-365c25b94918

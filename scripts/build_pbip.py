@@ -304,8 +304,8 @@ RETURN
     ("Variation matière article %", "5. Détail article", "0.0%",
      "Variation matière affichée seulement pour les matières de la composition des articles filtrés.",
      "IF ( NOT ISBLANK ( [Part matière moyenne] ), [Variation matière %] )"),
-    ("Prix brut", "5. Détail article", "#,0.00 €", "Prix brut public (somme sur les articles filtrés).",
-     "SUM ( fact_tarif[prix_brut] )"),
+    ("Prix brut", "5. Détail article", "#,0.00 €", "Prix brut public, affiché quand un seul article est sélectionné.",
+     "IF ( HASONEVALUE ( dim_article[article_id] ), SUM ( fact_tarif[prix_brut] ) )"),
 
     ("Dernier indice chargé", "2. Matières", "", "Libellé du dernier mois d'indice INSEE disponible (fraîcheur).",
      """VAR _d = CALCULATE ( MAX ( fact_indice[date] ), REMOVEFILTERS ( fact_indice ), REMOVEFILTERS ( dim_date ) )
@@ -336,12 +336,12 @@ def v(typ, x, y, w, h, roles=None, titre=None, ordre=None, objets=None, filtres=
 
 
 def entete(titre: str, sous_titre: str) -> list[dict]:
-    return [v("textbox", 20, 10, 860, 60, texte=(titre, sous_titre)),
-            v("card", 900, 14, 360, 52, {"Values": [m("Dernier indice chargé")]})]
+    return [v("textbox", 20, 6, 880, 72, texte=(titre, sous_titre)),
+            v("card", 920, 14, 340, 48, {"Values": [m("Dernier indice chargé")]}, objets={"police": 11})]
 
 
-def segment(champ, x, y, w=200, h=56, titre=None):
-    return v("slicer", x, y, w, h, {"Values": [champ]}, titre=titre, objets={"dropdown": True})
+def segment(champ, x, y, w=200, h=62, titre=None):
+    return v("slicer", x, y, w, h, {"Values": [champ]}, objets={"dropdown": True, "entete": titre})
 
 
 KPI_CAMPAGNE = [
@@ -363,12 +363,12 @@ PAGES = [
     ]),
     ("Fournisseurs", entete(
         "Fournisseurs : demandé vs justifié",
-        "Au-dessus de la diagonale : la hausse demandée dépasse ce que les matières expliquent. Taille = valeur achetée N.") + [
+        "Une bulle par fournisseur : plus elle est haute pour une même hausse justifiée, plus la hausse est contestable. Taille = valeur N.") + [
         segment(CAMPAGNE, 20, 80, titre="Campagne analysée (N+1)"),
         segment(("c", "dim_famille", "univers"), 240, 80, titre="Univers"),
         v("scatterChart", 20, 150, 640, 550,
           {"Category": [FOURN], "X": [m("Hausse justifiée %")], "Y": [m("Hausse demandée %")], "Size": [m("Valeur N")]},
-          titre="Hausse demandée × hausse justifiée", objets={"labels": True}),
+          titre="Hausse demandée × hausse justifiée", objets={"catlabels": True}),
         v("tableEx", 680, 150, 580, 550,
           {"Values": [FOURN, m("Hausse demandée %"), m("Hausse justifiée %"), m("Écart pts"),
                       m("€ renégociables"), m("Effet cliquet")]},
@@ -376,7 +376,7 @@ PAGES = [
     ]),
     ("Détail article", entete(
         "Détail article",
-        "Composition matière, évolution des indices de ses matières et historique de prix sur 4 campagnes.") + [
+        "Choisir un article : composition matière, indices de ses matières et historique de prix sur 4 campagnes.") + [
         segment(FOURN, 20, 80, w=240, titre="Fournisseur"),
         segment(("c", "dim_article", "designation"), 280, 80, w=420, titre="Article"),
         segment(CAMPAGNE, 720, 80, titre="Campagne analysée (N+1)"),
@@ -389,9 +389,9 @@ PAGES = [
         v("tableEx", 20, 490, 620, 210, {"Values": [("c", "fact_tarif", "campagne"), m("Prix brut")]},
           titre="Historique du prix brut", ordre=(("c", "fact_tarif", "campagne"), 1)),
         v("lineChart", 660, 150, 600, 550,
-          {"Category": [("c", "dim_date", "annee_mois")], "Series": [("c", "dim_matiere", "libelle")],
+          {"Category": [("c", "dim_date", "date")], "Series": [("c", "dim_matiere", "libelle")],
            "Y": [m("Indice matières article")]},
-          titre="Indices des matières de l'article (base 2010, €)", ordre=(("c", "dim_date", "annee_mois"), 1)),
+          titre="Indices des matières de l'article (base 2010, €)", objets={"continu": True}),
     ]),
     ("Matières", entete(
         "Matières premières",
@@ -399,9 +399,9 @@ PAGES = [
         segment(CAMPAGNE, 20, 80, titre="Campagne analysée (N+1)"),
         segment(("c", "param_fenetre", "mois"), 240, 80, titre="Fenêtre de référence (mois)"),
         v("lineChart", 20, 150, 800, 550,
-          {"Category": [("c", "dim_date", "annee_mois")], "Series": [("c", "dim_matiere", "libelle")],
+          {"Category": [("c", "dim_date", "date")], "Series": [("c", "dim_matiere", "libelle")],
            "Y": [m("Indice (composition)")]},
-          titre="Indices matières (base 2010, en €)", ordre=(("c", "dim_date", "annee_mois"), 1)),
+          titre="Indices matières (base 2010, en €)", objets={"continu": True}),
         v("clusteredBarChart", 840, 150, 420, 550,
           {"Category": [("c", "dim_matiere", "libelle")], "Y": [m("Variation matière %")]},
           titre="Variation matière sur la fenêtre", ordre=(m("Variation matière %"), 2), objets={"labels": True}),
@@ -569,7 +569,7 @@ def visuel(page: int, i: int, d: dict) -> dict:
         titre, sous = d["texte"]
         sv["objects"] = {"general": [{"properties": {"paragraphs": [
             {"textRuns": [{"value": titre, "textStyle": {"fontWeight": "bold", "fontSize": "20pt"}}]},
-            {"textRuns": [{"value": sous, "textStyle": {"fontSize": "11pt", "color": "#605E5C"}}]}]}}]}
+            {"textRuns": [{"value": sous, "textStyle": {"fontSize": "10pt", "color": "#605E5C"}}]}]}}]}
     else:
         q = Requete()
         select, proj = [], {}
@@ -592,8 +592,16 @@ def visuel(page: int, i: int, d: dict) -> dict:
         if d["objets"].get("dropdown"):
             objets["data"] = [{"properties": {"mode": lit("Dropdown")}}]
             objets["selection"] = [{"properties": {"strictSingleSelect": lit(False)}}]
+        if d["objets"].get("catlabels"):
+            objets["categoryLabels"] = [{"properties": {"show": lit(True)}}]
+        if d["objets"].get("continu"):
+            objets["categoryAxis"] = [{"properties": {"axisType": lit("Scalar")}}]
+        if d["objets"].get("entete"):
+            objets["header"] = [{"properties": {"text": lit(d["objets"]["entete"]), "show": lit(True)}}]
         if d["typ"] == "card":
             objets["categoryLabels"] = [{"properties": {"show": lit(False)}}]
+            if d["objets"].get("police"):
+                objets["labels"] = [{"properties": {"fontSize": lit(d["objets"]["police"])}}]
         if objets:
             sv["objects"] = objets
         if d["titre"]:
