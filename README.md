@@ -10,6 +10,8 @@ doit anticiper pour la campagne suivante.
 > **Campagne 2026 : les fournisseurs demandent +1,2 % quand les matières justifient −0,6 %. 335 k€ sont renégociables,
 > dont 120 k€ chez un seul fournisseur. Pour 2027, les cours à fin septembre 2026 justifient déjà +11,2 %.**
 
+🎬 Vidéo de présentation (77 s, vision achats) : [`docs/video/buyvera_promo.mp4`](docs/video/buyvera_promo.mp4)
+
 Indices matières réels (INSEE), tarifs, volumes et fournisseurs fictifs. La logique métier vient de 20 ans de
 distribution industrielle (transmission mécanique et CVC).
 

@@ -1,0 +1,352 @@
+"""Vidéo promotionnelle Buyvera BI (vision métier achats) : 1920×1080, 30 i/s, voix off française.
+
+Usage : python scripts/video_promo.py → docs/video/buyvera_promo.mp4
+Prérequis : pip install imageio-ffmpeg ; voix Windows « Microsoft Hortense » (System.Speech).
+Captures du rapport : docs/captures/*.png. Toutes les valeurs affichées sont celles du rapport (campagne 2026).
+"""
+from __future__ import annotations
+
+import math
+import subprocess
+import tempfile
+import wave
+from pathlib import Path
+
+import imageio_ffmpeg
+import numpy as np
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
+
+RACINE = Path(__file__).resolve().parents[1]
+CAPT = RACINE / "docs" / "captures"
+SORTIE = RACINE / "docs" / "video" / "buyvera_promo.mp4"
+W, H, FPS = 1920, 1080, 30
+FONTS = Path("C:/Windows/Fonts")
+
+NAVY, NAVY2, BLEU, AMBRE, ROUGE, VERT, BLANC, GRIS = (
+    (15, 23, 42), (30, 41, 59), (42, 120, 214), (237, 161, 0), (208, 59, 59), (12, 163, 12), (248, 250, 252), (148, 163, 184))
+CROP = (30, 226, 1222, 906)  # zone du canevas du rapport dans les captures 1728×1080
+
+
+def police(nom: str, taille: int) -> ImageFont.FreeTypeFont:
+    return ImageFont.truetype(str(FONTS / nom), taille)
+
+
+F_TITRE = lambda t: police("segoeuib.ttf", t)  # noqa: E731
+F_TEXTE = lambda t: police("segoeui.ttf", t)  # noqa: E731
+F_LEGER = lambda t: police("segoeuil.ttf", t)  # noqa: E731
+F_CHIFFRE = lambda t: police("bahnschrift.ttf", t)  # noqa: E731
+F_SYMB = lambda t: police("seguisym.ttf", t)  # noqa: E731
+
+
+def ease(t: float) -> float:
+    t = min(max(t, 0.0), 1.0)
+    return 1 - (1 - t) ** 3
+
+
+def apparition(t: float, debut: float, duree: float = 0.6) -> float:
+    return ease((t - debut) / duree)
+
+
+def fond() -> Image.Image:
+    img = Image.new("RGB", (W, H), NAVY)
+    d = ImageDraw.Draw(img)
+    for i in range(0, H, 4):  # léger dégradé vertical
+        c = tuple(int(a + (b - a) * i / H) for a, b in zip(NAVY, NAVY2))
+        d.rectangle([0, i, W, i + 4], fill=c)
+    return img
+
+
+FOND = fond()
+
+
+def texte(img, xy, s, font, couleur, alpha=1.0, ancre="la", dy=0):
+    if alpha <= 0:
+        return
+    calque = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    ImageDraw.Draw(calque).text((xy[0], xy[1] + (1 - alpha) * 30 + dy), s, font=font,
+                                fill=couleur + (int(255 * alpha),), anchor=ancre)
+    img.alpha_composite(calque)
+
+
+def pastille(img, xy, s, couleur, alpha=1.0, taille=34):
+    if alpha <= 0:
+        return
+    f = F_TITRE(taille)
+    calque = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(calque)
+    l, t, r, b = d.textbbox((0, 0), s, font=f)
+    x, y = xy[0], xy[1] + (1 - alpha) * 24
+    d.rounded_rectangle([x, y, x + r - l + 56, y + b - t + 34], radius=(b - t + 34) // 2,
+                        fill=couleur + (int(235 * alpha),))
+    d.text((x + 28, y + 17 - t), s, font=f, fill=BLANC + (int(255 * alpha),))
+    img.alpha_composite(calque)
+
+
+def charger_capture(nom: str, largeur: int) -> Image.Image:
+    im = Image.open(CAPT / nom).convert("RGB").crop(CROP)
+    h = int(im.height * largeur / im.width)
+    im = im.resize((largeur, h), Image.LANCZOS)
+    masque = Image.new("L", im.size, 0)
+    ImageDraw.Draw(masque).rounded_rectangle([0, 0, im.width, im.height], radius=22, fill=255)
+    out = Image.new("RGBA", im.size)
+    out.paste(im, (0, 0), masque)
+    return out
+
+
+CACHE: dict = {}
+
+
+def capture(img, nom, t, duree, x, y, largeur, focus=(0.5, 0.5), zoom=0.07):
+    """Capture du rapport en zoom lent (Ken Burns) vers un point d'intérêt, ombre portée."""
+    if nom not in CACHE:
+        CACHE[nom] = charger_capture(nom, largeur)
+    base = CACHE[nom]
+    a = apparition(t, 0, 0.7)
+    z = 1 + zoom * ease(t / duree)
+    bw, bh = base.size
+    cw, ch = int(bw / z), int(bh / z)
+    cx = int((bw - cw) * focus[0])
+    cy = int((bh - ch) * focus[1])
+    vue = base.crop((cx, cy, cx + cw, cy + ch)).resize((bw, bh), Image.BILINEAR)
+    ombre = Image.new("RGBA", (bw + 80, bh + 80), (0, 0, 0, 0))
+    ImageDraw.Draw(ombre).rounded_rectangle([40, 52, bw + 40, bh + 52], radius=26, fill=(0, 0, 0, int(130 * a)))
+    ombre = ombre.filter(ImageFilter.GaussianBlur(22))
+    img.alpha_composite(ombre, (x - 40, int(y - 40 + (1 - a) * 40)))
+    vue.putalpha(Image.eval(base.getchannel("A"), lambda v: int(v * a)))
+    img.alpha_composite(vue, (x, int(y + (1 - a) * 40)))
+
+
+def compteur(img, xy, valeur, fmt, t, debut, libelle, couleur):
+    a = apparition(t, debut, 0.5)
+    v = valeur * ease((t - debut) / 1.2)
+    texte(img, xy, fmt(v), F_CHIFFRE(92), couleur, a)
+    texte(img, (xy[0], xy[1] + 112), libelle, F_TEXTE(28), GRIS, a)
+
+
+def pct(v):
+    return f"{v:+.1f} %".replace(".", ",").replace("-", "–")
+
+
+# --------------------------------------------------------------------------------------
+# Scènes : (voix off, durée minimale, fonction de dessin(img, t, duree))
+# --------------------------------------------------------------------------------------
+def s_lettre(img, t, d):
+    a = apparition(t, 0.1)
+    calque = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    ImageDraw.Draw(calque).rounded_rectangle([460, 170 + (1 - a) * 40, 1460, 910 + (1 - a) * 40], radius=10,
+                                            fill=(250, 250, 247, int(255 * a)))
+    img.alpha_composite(calque)
+    noir = (30, 30, 30)
+    texte(img, (540, 240), "Orlenza Thermique", F_TITRE(34), noir, a)
+    texte(img, (540, 290), "Service commercial", F_TEXTE(24), (110, 110, 110), a)
+    texte(img, (540, 380), "Objet : revalorisation tarifaire au 1er janvier", F_TITRE(30), noir, apparition(t, 0.6))
+    corps = ["Madame, Monsieur,", "", "Suite à la forte évolution du coût des matières",
+             "premières, nous sommes contraints d'appliquer",
+             "une hausse de nos tarifs de"]
+    for i, l in enumerate(corps):
+        texte(img, (540, 460 + i * 44), l, F_TEXTE(28), noir, apparition(t, 1.0 + i * 0.25))
+    texte(img, (540, 690), "+6,2 %", F_CHIFFRE(110), ROUGE, apparition(t, 2.4, 0.4))
+
+
+def s_question(img, t, d):
+    texte(img, (W // 2, 430), "Cette hausse est-elle", F_TITRE(96), BLANC, apparition(t, 0.1), "mm")
+    texte(img, (W // 2, 560), "vraiment justifiée ?", F_TITRE(96), AMBRE, apparition(t, 0.5), "mm")
+
+
+def s_probleme(img, t, d):
+    texte(img, (200, 220), "Aujourd'hui, l'acheteur négocie à l'aveugle", F_TITRE(64), BLANC, apparition(t, 0.1))
+    items = [("✕", "Aucun lien entre la hausse demandée et les cours réels"),
+             ("✕", "Les baisses matières ne sont jamais répercutées"),
+             ("✕", "Le commercial connaît les cours avant vous")]
+    for i, (ic, s) in enumerate(items):
+        a = apparition(t, 1.0 + i * 1.3)
+        texte(img, (220, 400 + i * 130), ic, F_SYMB(56), ROUGE, a)
+        texte(img, (310, 405 + i * 130), s, F_TEXTE(48), BLANC, a)
+
+
+def s_logo(img, t, d):
+    a = apparition(t, 0.1, 0.8)
+    r = int(70 + 10 * math.sin(t * 2))
+    calque = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    ImageDraw.Draw(calque).ellipse([W // 2 - 420 - r, 330 - r, W // 2 - 420 + r, 330 + r], fill=BLEU + (int(200 * a),))
+    img.alpha_composite(calque)
+    texte(img, (W // 2 - 420, 330), "B", F_TITRE(110), BLANC, a, "mm")
+    texte(img, (W // 2 - 300, 330), "Buyvera BI", F_TITRE(120), BLANC, a, "lm")
+    texte(img, (W // 2, 560), "Chaque tarif fournisseur confronté", F_LEGER(58), BLANC, apparition(t, 0.8), "mm")
+    texte(img, (W // 2, 640), "aux cours réels des matières premières", F_LEGER(58), AMBRE, apparition(t, 1.1), "mm")
+    texte(img, (W // 2, 780), "Cuivre · Aluminium · Nickel · Acier · Zinc · Plastiques — indices INSEE",
+          F_TEXTE(30), GRIS, apparition(t, 1.6), "mm")
+
+
+def s_synthese(img, t, d):
+    capture(img, "01_synthese_campagne.png", t, d, 760, 180, 1080, focus=(0.6, 0.3))
+    texte(img, (90, 170), "Campagne 2026", F_TITRE(44), BLANC, apparition(t, 0.2))
+    compteur(img, (90, 260), 1.2, pct, t, 0.6, "hausse demandée", AMBRE)
+    compteur(img, (90, 480), -0.6, pct, t, 1.6, "justifiée par les matières", VERT)
+    compteur(img, (90, 700), 335, lambda v: f"{v:,.0f} k€".replace(",", " "), t, 2.8, "à renégocier", ROUGE)
+
+
+def s_fournisseurs(img, t, d):
+    capture(img, "02_fournisseurs.png", t, d, 90, 210, 1180, focus=(0.15, 0.6), zoom=0.12)
+    texte(img, (1320, 260), "Qui demande plus", F_TITRE(54), BLANC, apparition(t, 0.4))
+    texte(img, (1320, 330), "que ses matières ?", F_TITRE(54), AMBRE, apparition(t, 0.6))
+    pastille(img, (1320, 480), "▲ À renégocier", ROUGE, apparition(t, 1.4))
+    pastille(img, (1320, 580), "● À surveiller", (236, 131, 90), apparition(t, 1.8))
+    pastille(img, (1320, 680), "● Conforme", VERT, apparition(t, 2.2))
+    texte(img, (1320, 820), "Nuage animé 2024 → 2026", F_TEXTE(30), GRIS, apparition(t, 2.8))
+
+
+def s_alertes(img, t, d):
+    capture(img, "06_alertes_matieres.png", t, d, 760, 170, 1080, focus=(0.3, 0.25), zoom=0.1)
+    texte(img, (90, 170), "Sachez avant", F_TITRE(60), BLANC, apparition(t, 0.2))
+    texte(img, (90, 245), "le commercial", F_TITRE(60), AMBRE, apparition(t, 0.4))
+    pastille(img, (90, 400), "▼ Baisse : convoquer le commercial", VERT, apparition(t, 1.4), 30)
+    pastille(img, (90, 500), "▲ Hausse : anticiper les achats", ROUGE, apparition(t, 2.4), 30)
+    compteur(img, (90, 650), 11.2, pct, t, 3.6, "déjà justifiés pour 2027", AMBRE)
+
+
+def s_fiche(img, t, d):
+    capture(img, "07_fiche_negociation.png", t, d, 90, 210, 1180, focus=(0.5, 0.35), zoom=0.1)
+    texte(img, (1320, 250), "Prêt pour", F_TITRE(56), BLANC, apparition(t, 0.3))
+    texte(img, (1320, 322), "le rendez-vous", F_TITRE(56), AMBRE, apparition(t, 0.5))
+    for i, s in enumerate(["Argument rédigé", "Levier matière chiffré", "Contre-proposition simulée",
+                           "Historique demandé / justifié"]):
+        a = apparition(t, 1.3 + i * 0.6)
+        texte(img, (1320, 470 + i * 90), "✓", F_SYMB(44), VERT, a)
+        texte(img, (1380, 474 + i * 90), s, F_TEXTE(38), BLANC, a)
+
+
+def s_rls(img, t, d):
+    capture(img, "08_rls_acheteur_cvc.png", t, d, 760, 210, 1080, focus=(0.5, 0.5), zoom=0.05)
+    texte(img, (90, 300), "Chaque acheteur,", F_TITRE(60), BLANC, apparition(t, 0.2))
+    texte(img, (90, 380), "son périmètre", F_TITRE(60), AMBRE, apparition(t, 0.4))
+    texte(img, (90, 520), "Sécurité par acheteur.", F_TEXTE(38), GRIS, apparition(t, 1.2))
+    texte(img, (90, 580), "La direction voit tout.", F_TEXTE(38), GRIS, apparition(t, 1.5))
+
+
+def s_benefices(img, t, d):
+    texte(img, (W // 2, 200), "Ce que gagnent les achats", F_TITRE(66), BLANC, apparition(t, 0.1), "mm")
+    cartes = [("Négocier", "les baisses aussi vite", "que les hausses", VERT),
+              ("Anticiper", "la campagne suivante", "avant le tarif", AMBRE),
+              ("Aligner", "achats, appros", "et commerciaux", BLEU)]
+    for i, (a1, a2, a3, c) in enumerate(cartes):
+        a = apparition(t, 0.8 + i * 0.9)
+        x = 180 + i * 540
+        calque = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        ImageDraw.Draw(calque).rounded_rectangle([x, 330 + (1 - a) * 40, x + 480, 780 + (1 - a) * 40], radius=24,
+                                                fill=NAVY2 + (int(255 * a),), outline=c + (int(255 * a),), width=4)
+        img.alpha_composite(calque)
+        texte(img, (x + 240, 450), a1, F_TITRE(64), c, a, "mm")
+        texte(img, (x + 240, 570), a2, F_TEXTE(36), BLANC, a, "mm")
+        texte(img, (x + 240, 625), a3, F_TEXTE(36), BLANC, a, "mm")
+
+
+def s_fin(img, t, d):
+    a = apparition(t, 0.1, 0.8)
+    texte(img, (W // 2, 360), "Buyvera BI", F_TITRE(140), BLANC, a, "mm")
+    texte(img, (W // 2, 520), "Ne subissez plus les hausses. Argumentez.", F_LEGER(64), AMBRE, apparition(t, 0.7), "mm")
+    texte(img, (W // 2, 700), "Power BI · DAX · TMDL · indices INSEE", F_TEXTE(34), GRIS, apparition(t, 1.3), "mm")
+    texte(img, (W // 2, 770), "github.com/PDUCLOS/buyvera-bi", F_TITRE(40), BLANC, apparition(t, 1.6), "mm")
+    texte(img, (W // 2, 950), "Indices matières réels · tarifs, volumes et fournisseurs fictifs",
+          F_TEXTE(24), GRIS, apparition(t, 2.0), "mm")
+
+
+SCENES = [
+    ("Chaque année, la même lettre. Nos tarifs augmentent, à cause des matières premières.", 4.5, s_lettre),
+    ("Mais cette hausse est-elle vraiment justifiée ?", 3.0, s_question),
+    ("Sans outil, l'acheteur négocie à l'aveugle. Les baisses ne sont jamais répercutées. "
+     "Et le commercial connaît les cours avant lui.", 5.5, s_probleme),
+    ("Buyvera BI confronte chaque tarif fournisseur aux cours réels des matières premières.", 4.0, s_logo),
+    ("Sur la campagne 2026, les fournisseurs demandent plus un virgule deux pour cent, quand les matières "
+     "justifient moins zéro virgule six. Trois cent trente cinq mille euros sont à renégocier.", 6.0, s_synthese),
+    ("En un coup d'œil, vous voyez qui demande plus que ses matières ne le justifient.", 4.5, s_fournisseurs),
+    ("Les alertes matières vous préviennent avant le commercial. Une baisse ? On le convoque. "
+     "Une hausse ? On anticipe les achats. Pour 2027, les cours justifient déjà plus onze pour cent.", 6.5, s_alertes),
+    ("Pour le rendez-vous, la fiche négociation rédige l'argument et chiffre la contre-proposition.", 5.0, s_fiche),
+    ("Chaque acheteur ne voit que son périmètre.", 3.0, s_rls),
+    ("Négocier les baisses aussi vite que les hausses. Anticiper la campagne suivante. "
+     "Aligner achats, approvisionnements et commerciaux.", 5.5, s_benefices),
+    ("Buyvera BI. Ne subissez plus les hausses : argumentez.", 4.5, s_fin),
+]
+FONDU = 0.35  # fondu au noir entre scènes, en secondes
+
+
+def voix(dossier: Path) -> list[Path]:
+    """Synthèse vocale Windows (Hortense, fr-FR), un WAV par scène."""
+    fichiers = [dossier / f"s{i:02d}.wav" for i in range(len(SCENES))]
+    lignes = ["Add-Type -AssemblyName System.Speech",
+              "$s = New-Object System.Speech.Synthesis.SpeechSynthesizer",
+              "$s.SelectVoice('Microsoft Hortense Desktop')", "$s.Rate = 2"]
+    for f, (txt, _, _) in zip(fichiers, SCENES):
+        lignes += [f"$s.SetOutputToWaveFile('{f}')", f"$s.Speak('{txt.replace(chr(39), chr(39) * 2)}')"]
+    lignes.append("$s.Dispose()")
+    ps1 = dossier / "voix.ps1"
+    ps1.write_text("\n".join(lignes), encoding="utf-8-sig")
+    subprocess.run(["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(ps1)], check=True)
+    return fichiers
+
+
+def lire_wav(p: Path) -> tuple[np.ndarray, int]:
+    with wave.open(str(p)) as w:
+        data = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16)
+        if w.getnchannels() == 2:
+            data = data.reshape(-1, 2).mean(axis=1).astype(np.int16)
+        return data, w.getframerate()
+
+
+def main() -> None:
+    SORTIE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = Path(tempfile.mkdtemp(prefix="buyvera_video_"))
+    wavs = voix(tmp)
+    pistes = [lire_wav(p) for p in wavs]
+    sr = pistes[0][1]
+    durees = [max(mini, len(a) / sr + 0.9) for (a, _), (_, mini, _) in zip(pistes, SCENES)]
+    total = sum(durees)
+
+    # Piste audio : chaque voix démarre 0,3 s après le début de sa scène
+    audio = np.zeros(int((total + 0.5) * sr), dtype=np.int16)
+    debut = 0.0
+    for (a, _), d in zip(pistes, durees):
+        i = int((debut + 0.3) * sr)
+        audio[i:i + len(a)] = a[: len(audio) - i]
+        debut += d
+    wav_total = tmp / "voix.wav"
+    with wave.open(str(wav_total), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(sr)
+        w.writeframes(audio.tobytes())
+
+    ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
+    proc = subprocess.Popen([ffmpeg, "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24",
+                             "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-", "-i", str(wav_total),
+                             "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p",
+                             "-c:a", "aac", "-b:a", "160k", "-shortest", "-movflags", "+faststart", str(SORTIE)],
+                            stdin=subprocess.PIPE)
+    vignettes = []
+    for n, ((_, _, dessin), d) in enumerate(zip(SCENES, durees)):
+        nb = int(d * FPS)
+        for k in range(nb):
+            t = k / FPS
+            img = FOND.copy().convert("RGBA")
+            dessin(img, t, d)
+            fade = min(1.0, t / FONDU, (d - t) / FONDU)
+            frame = img.convert("RGB")
+            if fade < 1:
+                frame = Image.blend(Image.new("RGB", (W, H), (0, 0, 0)), frame, max(fade, 0))
+            if k == int(nb * 0.8):
+                vignettes.append(frame.copy())
+            proc.stdin.write(frame.tobytes())
+        print(f"scène {n + 1}/{len(SCENES)} : {d:.1f} s")
+    proc.stdin.close()
+    proc.wait()
+    planche = Image.new("RGB", (4 * 480, 3 * 270), NAVY)
+    for i, v in enumerate(vignettes):
+        planche.paste(v.resize((480, 270)), ((i % 4) * 480, (i // 4) * 270))
+    planche.save(SORTIE.with_name("planche_contact.png"))
+    vignettes[4].save(SORTIE.with_name("miniature.png"))
+    print(f"{SORTIE} : {total:.1f} s, {SORTIE.stat().st_size / 1e6:.1f} Mo")
+
+
+if __name__ == "__main__":
+    main()
