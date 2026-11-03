@@ -1,0 +1,11 @@
+// Simule le filtre du rôle Acheteur (dim_acheteur[email] = utilisateur) pour chaque email
+EVALUATE
+ADDCOLUMNS (
+    VALUES ( dim_acheteur[email] ),
+    "familles", CALCULATE ( CONCATENATEX ( VALUES ( dim_famille[libelle] ), dim_famille[libelle], ", " ) ),
+    "nb_articles", CALCULATE ( COUNTROWS ( dim_article ) ),
+    "nb_fournisseurs_actifs", CALCULATE ( DISTINCTCOUNT ( dim_article[fournisseur_id] ) ),
+    "eur_reneg_2026", CALCULATE ( [€ renégociables] ),
+    "plafond_2027", CALCULATE ( [Plafond justifié prochaine campagne %] ),
+    "montant_achats", CALCULATE ( [Montant achats] )
+)

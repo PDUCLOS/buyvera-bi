@@ -1,0 +1,8 @@
+EVALUATE
+ROW (
+    "utilisateur", USERPRINCIPALNAME (),
+    "familles", CONCATENATEX ( VALUES ( dim_famille[libelle] ), dim_famille[libelle], ", " ),
+    "nb_articles", COUNTROWS ( dim_article ),
+    "eur_reneg_2026", [€ renégociables],
+    "montant_achats", [Montant achats]
+)

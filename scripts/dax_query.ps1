@@ -1,6 +1,7 @@
 # Exécute une requête DAX sur le modèle ouvert dans Power BI Desktop (moteur local).
 # Usage (Windows PowerShell 5.1) : powershell -File scripts\dax_query.ps1 -Fichier requete.dax
-param([Parameter(Mandatory = $true)][string]$Fichier)
+#        Test RLS : -Role Acheteur -Utilisateur acheteur.cvc@buyvera.example
+param([Parameter(Mandatory = $true)][string]$Fichier, [string]$Role = "", [string]$Utilisateur = "")
 
 $ErrorActionPreference = 'Stop'
 $asm = [System.Reflection.Assembly]::LoadFrom('C:\Program Files\Microsoft Power BI Desktop\bin\Microsoft.PowerBI.AdomdClient.dll')
@@ -10,7 +11,10 @@ $portFile = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\Power BI Desktop\Analysis
     Sort-Object LastWriteTime -Descending | Select-Object -First 1
 $port = [System.IO.File]::ReadAllText($portFile.FullName, [System.Text.Encoding]::Unicode).Trim()
 
-$cn = [Activator]::CreateInstance($typeCn, @("Data Source=localhost:$port"))
+$cs = "Data Source=localhost:$port"
+if ($Role) { $cs += ";Roles=$Role" }
+if ($Utilisateur) { $cs += ";EffectiveUserName=$Utilisateur" }
+$cn = [Activator]::CreateInstance($typeCn, @($cs))
 $cn.Open()
 $cmd = $cn.CreateCommand()
 $cmd.CommandText = [System.IO.File]::ReadAllText((Resolve-Path $Fichier), [System.Text.Encoding]::UTF8)
