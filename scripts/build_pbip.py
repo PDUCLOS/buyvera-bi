@@ -684,7 +684,7 @@ PAGES = [
                            m("€ renégociables"): "€ renégociables", m("Effet cliquet"): "Cliquet"},
                   "couleur_texte": (m("Statut fournisseur"), "Couleur écart")}),
         segment(FOURN, 540, 80, w=260, titre="Fournisseur"),
-        bouton("Ouvrir la fiche négociation  →", 6, 1020, 92, w=240),
+        bouton("Fiche négociation  →", 6, 1060, 92, w=200),
     ]),
     ("Détail article", entete(
         "Détail article",
