@@ -1,0 +1,4 @@
+acheteur_id,nom,email,role,perimetre
+ACH1,Camille Rouvier,acheteur.transmission@buyvera.example,Acheteur,Transmission
+ACH2,Sami Delorme,acheteur.cvc@buyvera.example,Acheteur,CVC
+ACH3,Claire Bastide,responsable.achats@buyvera.example,Direction,Tous

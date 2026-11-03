@@ -1,0 +1,9 @@
+famille_id,libelle,univers,acheteur_id
+ROUL,Roulements,Transmission,ACH1
+MOT,Moteurs électriques,Transmission,ACH1
+RED,Réducteurs,Transmission,ACH1
+COUR,Courroies et chaînes,Transmission,ACH1
+PAC,Pompes à chaleur,CVC,ACH2
+CLIM,Climatisation,CVC,ACH2
+TUBE,Tubes et raccords cuivre,CVC,ACH2
+VENT,Ventilation,CVC,ACH2

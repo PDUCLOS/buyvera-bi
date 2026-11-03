@@ -1,0 +1,13 @@
+fournisseur_id,nom,pays,devise,prefixe_tarif,profil
+F01,Rotavel,FR,EUR,ROT,honnete
+F02,Mekandra,FR,EUR,MKD,honnete
+F03,Tressile,IT,EUR,TRS,honnete
+F04,Brunelle Aéraulique,FR,EUR,BRA,honnete
+F05,Kelmaro Antriebe,DE,EUR,KLM,opportuniste
+F06,Vandrelo,ES,EUR,VDR,opportuniste
+F07,Orlenza Thermique,FR,EUR,ORZ,opportuniste
+F08,Cuprana,IT,EUR,CPR,opportuniste
+F09,Zentrix Technik,DE,EUR,ZTX,cliquet
+F10,Aerivo Klima,BE,EUR,AER,cliquet
+F11,Halderis,NL,EUR,HLD,refs_modifiees
+F12,Sorvane,FR,EUR,SRV,refs_modifiees

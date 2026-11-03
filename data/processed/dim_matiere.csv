@@ -1,0 +1,9 @@
+matiere_id,libelle,source,idbank,titre_insee,unite,utilisee_composition,dernier_mois
+CU,Cuivre,INSEE BDM,010002094,"Cuivre, grade A - Au comptant - LME - Indice en euros - Base 2010","indice base 2010, en €",True,2026-09
+AL,Aluminium,INSEE BDM,010002093,Aluminium - Haut grade - Au comptant - LME - Indice en euros - Base 2010,"indice base 2010, en €",True,2026-09
+NI,Nickel (inox),INSEE BDM,010002096,Nickel - Au comptant - LME - Indice en euros - Base 2010,"indice base 2010, en €",True,2026-09
+ZN,Zinc,INSEE BDM,010002098,Zinc - Haut grade - Au comptant - LME - Indice en euros - Base 2010,"indice base 2010, en €",True,2026-09
+FE,Acier / métaux ferreux,INSEE BDM,010002103,Indices des prix internationaux des matières premières importées - Métaux ferreux- En euros - Base 100 en 2010,"indice base 2010, en €",True,2026-09
+PL,Plastiques (naphta),INSEE BDM,010002090,Naphta (Nord-Ouest Européen) - Prix spot - Indice en euros - Base 2010,"indice base 2010, en €",True,2026-09
+CU_T,Cuivre LME comptant (€/t),INSEE BDM,010767327,Cuivre - Grade A - LME (London Metal Exchange) - Au comptant - Prix en euros par tonne,€ / tonne,False,2026-09
+NM,"Non matière (main-d'œuvre, énergie, frais)",Hypothèse 2%/an,,,indice base 100 en 2022-01,True,2026-09
