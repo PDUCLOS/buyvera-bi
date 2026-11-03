@@ -1,0 +1,68 @@
+/// Prix brut public par article et par campagne tarifaire (synthétique).
+table fact_tarif
+	lineageTag: dfa80261-a57d-5b04-bfe8-91d5073d2491
+
+	/// Article.
+	column article_id
+		dataType: string
+		isHidden
+		lineageTag: 0f1dcaac-6441-5ce4-bb67-e871bbddb446
+		summarizeBy: none
+		sourceColumn: article_id
+
+		annotation SummarizationSetBy = User
+
+	/// Fournisseur (redondant : le filtre passe par dim_article).
+	column fournisseur_id
+		dataType: string
+		isHidden
+		lineageTag: f77b7a6a-14b9-5014-a136-2982507bd389
+		summarizeBy: none
+		sourceColumn: fournisseur_id
+
+		annotation SummarizationSetBy = User
+
+	/// Campagne tarifaire (année d'effet).
+	column campagne
+		dataType: int64
+		lineageTag: 6517342f-acb6-5afe-a1dc-0758ecdc1183
+		summarizeBy: none
+		sourceColumn: campagne
+
+		annotation SummarizationSetBy = User
+
+	/// Date d'effet du tarif (1er janvier).
+	column date_effet
+		dataType: dateTime
+		formatString: Short Date
+		isHidden
+		lineageTag: 71fccfae-d97a-5a4a-bec4-dc514d4c5954
+		summarizeBy: none
+		sourceColumn: date_effet
+
+		annotation UnderlyingDateTimeDataType = Date
+
+		annotation SummarizationSetBy = User
+
+	/// Prix brut public en euros. Vide si la ligne tarif est arrivée sans prix.
+	column prix_brut
+		dataType: double
+		formatString: #,0.00
+		lineageTag: 3ba9a08c-6bf1-5a52-9ffd-1ac2711ca323
+		summarizeBy: none
+		sourceColumn: prix_brut
+
+		annotation SummarizationSetBy = User
+
+	partition fact_tarif = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document ( File.Contents ( DossierDonnees & "fact_tarif.csv" ), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv] ),
+				    Entetes = Table.PromoteHeaders ( Source, [PromoteAllScalars = true] ),
+				    Vides = Table.ReplaceValue ( Entetes, "", null, Replacer.ReplaceValue, {"prix_brut"} ),
+				    Types = Table.TransformColumnTypes ( Vides, {{"article_id", type text}, {"fournisseur_id", type text}, {"campagne", Int64.Type}, {"date_effet", type date}, {"prix_brut", type number}}, "en-US" )
+				in
+				    Types
+
+	annotation PBI_ResultType = Table

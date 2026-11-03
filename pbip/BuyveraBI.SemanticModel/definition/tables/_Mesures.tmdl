@@ -1,0 +1,283 @@
+/// Table des mesures (aucune donnée).
+table _Mesures
+	lineageTag: a4378ccb-333d-549f-9d5d-37f5581ecadf
+
+	/// Campagne analysée (segment param_campagne, 2026 par défaut).
+	measure 'Campagne N+1' = SELECTEDVALUE ( param_campagne[campagne], 2026 )
+		formatString: 0
+		displayFolder: 9. Paramètres
+		lineageTag: f59a2a11-fb66-572e-8ea6-75d64742a2be
+
+	/// Campagne de référence = campagne N+1 − 1.
+	measure 'Campagne N' = [Campagne N+1] - 1
+		formatString: 0
+		displayFolder: 9. Paramètres
+		lineageTag: 667b1d97-432d-5068-b444-7e2b1ad54cf7
+
+	/// Période de référence des indices (segment param_fenetre, 6 mois par défaut).
+	measure 'Fenêtre mois' = SELECTEDVALUE ( param_fenetre[mois], 6 )
+		formatString: 0
+		displayFolder: 9. Paramètres
+		lineageTag: 1b73af12-93f0-5342-ba17-175ba96b96cb
+
+	/// Moyenne de l'indice sur la fenêtre avant la campagne N+1 / même moyenne avant la campagne N − 1. Une seule matière à la fois.
+	measure 'Variation matière %' = ```
+			VAR _cN1 = [Campagne N+1]
+			VAR _w = [Fenêtre mois]
+			VAR _fin1 = DATE ( _cN1, 1, 1 )
+			VAR _fin0 = DATE ( _cN1 - 1, 1, 1 )
+			VAR _moy1 =
+			    CALCULATE ( AVERAGE ( fact_indice[valeur_eur] ), REMOVEFILTERS ( dim_date ),
+			        dim_date[date] >= EDATE ( _fin1, - _w ), dim_date[date] < _fin1 )
+			VAR _moy0 =
+			    CALCULATE ( AVERAGE ( fact_indice[valeur_eur] ), REMOVEFILTERS ( dim_date ),
+			        dim_date[date] >= EDATE ( _fin0, - _w ), dim_date[date] < _fin0 )
+			VAR _ratio = DIVIDE ( _moy1, _moy0 )
+			RETURN
+			    IF ( HASONEVALUE ( dim_matiere[matiere_id] ) && NOT ISBLANK ( _ratio ), _ratio - 1 )
+			```
+		formatString: 0.0%
+		displayFolder: 2. Matières
+		lineageTag: 22941f2e-c78f-50fb-bbb2-74b21cf8b96a
+
+	/// Moyenne de l'indice matière sur la période filtrée.
+	measure 'Indice moyen' = AVERAGE ( fact_indice[valeur_eur] )
+		formatString: #,0.0
+		displayFolder: 2. Matières
+		lineageTag: 32e68562-2eb7-50b7-a2ae-a12c109af21c
+
+	/// Part moyenne de la matière dans le coût des articles filtrés.
+	measure 'Part matière moyenne' = AVERAGE ( bridge_composition[part] )
+		formatString: 0.0%
+		displayFolder: 2. Matières
+		lineageTag: 7cfa3569-c2e6-5f6b-bf8d-f5fad6ea739c
+
+	/// Σ prix N × volume N sur le panier comparable (prix aux deux campagnes, volume N > 0).
+	measure 'Valeur N' = ```
+			VAR _cN1 = [Campagne N+1]
+			VAR _cN = _cN1 - 1
+			VAR _articles =
+			    ADDCOLUMNS (
+			        VALUES ( dim_article[article_id] ),
+			        "@pN", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cN ),
+			        "@pN1", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cN1 ),
+			        "@vN", CALCULATE ( SUM ( fact_achats[quantite] ), REMOVEFILTERS ( dim_date ), dim_date[annee] = _cN )
+			    )
+			VAR _panier = FILTER ( _articles, NOT ISBLANK ( [@pN] ) && NOT ISBLANK ( [@pN1] ) && [@vN] > 0 )
+			RETURN
+			    SUMX ( _panier, [@pN] * [@vN] )
+			```
+		formatString: #,0 €
+		displayFolder: 1. Hausses
+		lineageTag: e52f2d1c-96c9-5bd1-a425-e2b74ccaa14c
+
+	/// Σ (prix N+1 × volume N) / Σ (prix N × volume N) − 1, pondérée par les volumes N.
+	measure 'Hausse demandée %' = ```
+			VAR _cN1 = [Campagne N+1]
+			VAR _cN = _cN1 - 1
+			VAR _articles =
+			    ADDCOLUMNS (
+			        VALUES ( dim_article[article_id] ),
+			        "@pN", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cN ),
+			        "@pN1", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cN1 ),
+			        "@vN", CALCULATE ( SUM ( fact_achats[quantite] ), REMOVEFILTERS ( dim_date ), dim_date[annee] = _cN )
+			    )
+			VAR _panier = FILTER ( _articles, NOT ISBLANK ( [@pN] ) && NOT ISBLANK ( [@pN1] ) && [@vN] > 0 )
+			VAR _avant = SUMX ( _panier, [@pN] * [@vN] )
+			VAR _apres = SUMX ( _panier, [@pN1] * [@vN] )
+			VAR _ratio = DIVIDE ( _apres, _avant )
+			RETURN
+			    IF ( NOT ISBLANK ( _ratio ), _ratio - 1 )
+			```
+		formatString: 0.0%
+		displayFolder: 1. Hausses
+		lineageTag: 7855a71b-3ed9-56a8-b44f-249436b33721
+
+	/// Σ (part matière × variation matière), non matière à 2 %/an comprise, pondérée comme la hausse demandée.
+	measure 'Hausse justifiée %' = ```
+			VAR _cN1 = [Campagne N+1]
+			VAR _cN = _cN1 - 1
+			VAR _articles =
+			    ADDCOLUMNS (
+			        VALUES ( dim_article[article_id] ),
+			        "@pN", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cN ),
+			        "@pN1", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cN1 ),
+			        "@vN", CALCULATE ( SUM ( fact_achats[quantite] ), REMOVEFILTERS ( dim_date ), dim_date[annee] = _cN )
+			    )
+			VAR _panier = FILTER ( _articles, NOT ISBLANK ( [@pN] ) && NOT ISBLANK ( [@pN1] ) && [@vN] > 0 )
+			VAR _variations =
+			    CALCULATETABLE (
+			        ADDCOLUMNS ( VALUES ( dim_matiere[matiere_id] ), "@var", [Variation matière %] ),
+			        REMOVEFILTERS ( dim_matiere )
+			    )
+			VAR _panierJ =
+			    ADDCOLUMNS (
+			        _panier,
+			        "@j",
+			            SUMX (
+			                CALCULATETABLE ( bridge_composition, REMOVEFILTERS ( dim_matiere ) ),
+			                VAR _m = bridge_composition[matiere_id]
+			                RETURN bridge_composition[part] * MAXX ( FILTER ( _variations, dim_matiere[matiere_id] = _m ), [@var] )
+			            )
+			    )
+			RETURN
+			    DIVIDE ( SUMX ( _panierJ, [@j] * [@pN] * [@vN] ), SUMX ( _panierJ, [@pN] * [@vN] ) )
+			```
+		formatString: 0.0%
+		displayFolder: 1. Hausses
+		lineageTag: 2ba0d2ef-5404-5b79-a6ed-bd55378b986b
+
+	/// Hausse demandée − hausse justifiée, en points de pourcentage.
+	measure 'Écart pts' = ```
+			VAR _d = [Hausse demandée %]
+			VAR _j = [Hausse justifiée %]
+			RETURN
+			    IF ( NOT ISBLANK ( _d ) && NOT ISBLANK ( _j ), ( _d - _j ) * 100 )
+			```
+		formatString: +0.0;-0.0;0.0
+		displayFolder: 1. Hausses
+		lineageTag: afd00639-4a12-5eaf-9c8d-225a4a499f5d
+
+	/// Σ par article de MAX(0, hausse demandée − hausse justifiée) × prix N × volume N.
+	measure '€ renégociables' = ```
+			VAR _cN1 = [Campagne N+1]
+			VAR _cN = _cN1 - 1
+			VAR _articles =
+			    ADDCOLUMNS (
+			        VALUES ( dim_article[article_id] ),
+			        "@pN", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cN ),
+			        "@pN1", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cN1 ),
+			        "@vN", CALCULATE ( SUM ( fact_achats[quantite] ), REMOVEFILTERS ( dim_date ), dim_date[annee] = _cN )
+			    )
+			VAR _panier = FILTER ( _articles, NOT ISBLANK ( [@pN] ) && NOT ISBLANK ( [@pN1] ) && [@vN] > 0 )
+			VAR _variations =
+			    CALCULATETABLE (
+			        ADDCOLUMNS ( VALUES ( dim_matiere[matiere_id] ), "@var", [Variation matière %] ),
+			        REMOVEFILTERS ( dim_matiere )
+			    )
+			VAR _panierJ =
+			    ADDCOLUMNS (
+			        _panier,
+			        "@j",
+			            SUMX (
+			                CALCULATETABLE ( bridge_composition, REMOVEFILTERS ( dim_matiere ) ),
+			                VAR _m = bridge_composition[matiere_id]
+			                RETURN bridge_composition[part] * MAXX ( FILTER ( _variations, dim_matiere[matiere_id] = _m ), [@var] )
+			            )
+			    )
+			RETURN
+			    SUMX ( _panierJ, MAX ( 0, DIVIDE ( [@pN1], [@pN] ) - 1 - [@j] ) * [@pN] * [@vN] )
+			```
+		formatString: #,0 €
+		displayFolder: 1. Hausses
+		lineageTag: 4331e8b1-b8d5-58dd-8def-019ad2074b9c
+
+	/// Articles du panier comparable N / N+1.
+	measure 'Nb articles comparables' = ```
+			VAR _cN1 = [Campagne N+1]
+			VAR _cN = _cN1 - 1
+			VAR _articles =
+			    ADDCOLUMNS (
+			        VALUES ( dim_article[article_id] ),
+			        "@pN", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cN ),
+			        "@pN1", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cN1 ),
+			        "@vN", CALCULATE ( SUM ( fact_achats[quantite] ), REMOVEFILTERS ( dim_date ), dim_date[annee] = _cN )
+			    )
+			VAR _panier = FILTER ( _articles, NOT ISBLANK ( [@pN] ) && NOT ISBLANK ( [@pN1] ) && [@vN] > 0 )
+			RETURN
+			    COUNTROWS ( _panier )
+			```
+		formatString: #,0
+		displayFolder: 1. Hausses
+		lineageTag: 609d872e-7c97-5529-b343-249c6f7d816f
+
+	/// Nombre de campagnes où la hausse justifiée est négative alors que la hausse demandée ne l'est pas.
+	measure 'Effet cliquet' = ```
+			SUMX (
+			    ALL ( param_campagne[campagne] ),
+			    VAR _j = [Hausse justifiée %]
+			    VAR _d = [Hausse demandée %]
+			    RETURN IF ( NOT ISBLANK ( _j ) && _j < 0 && _d >= 0, 1, 0 )
+			)
+			```
+		formatString: 0
+		displayFolder: 1. Hausses
+		lineageTag: 5b125fcd-7ff9-5581-b1ba-b461f2f624fd
+
+	/// Quantités × prix brut du tarif de l'année d'achat.
+	measure 'Montant achats' = SUM ( fact_achats[montant] )
+		formatString: #,0 €
+		displayFolder: 3. Achats
+		lineageTag: ee5c1020-03a6-582a-bc5a-f839a604de29
+
+	/// Quantités achetées.
+	measure 'Quantité achetée' = SUM ( fact_achats[quantite] )
+		formatString: #,0
+		displayFolder: 3. Achats
+		lineageTag: 047ccf09-1393-5a5b-aa3b-ede43b5a00ba
+
+	/// Nombre d'articles.
+	measure 'Nb articles' = COUNTROWS ( dim_article )
+		formatString: #,0
+		displayFolder: 3. Achats
+		lineageTag: 02ede9ae-9ed3-5668-93d8-fca1bd479afd
+
+	/// Articles au statut Automatique / total des articles.
+	measure '% rattachés auto' = ```
+			VAR _auto = CALCULATE ( COUNTROWS ( dim_article ), dim_article[statut_rattachement] = "Automatique" )
+			RETURN
+			    DIVIDE ( _auto, COUNTROWS ( dim_article ) )
+			```
+		formatString: 0.0%
+		displayFolder: 4. Rattachement
+		lineageTag: 86071c8c-57a9-534b-8116-8078c49e6391
+
+	/// Articles au statut Proposé (à valider) / total.
+	measure '% proposés' = ```
+			VAR _n = CALCULATE ( COUNTROWS ( dim_article ), dim_article[statut_rattachement] = "Proposé" )
+			RETURN
+			    DIVIDE ( _n, COUNTROWS ( dim_article ) )
+			```
+		formatString: 0.0%
+		displayFolder: 4. Rattachement
+		lineageTag: f0aadbfd-8752-52aa-a847-06097fb38d56
+
+	/// Articles au statut Non rattaché / total.
+	measure '% non rattachés' = ```
+			VAR _n = CALCULATE ( COUNTROWS ( dim_article ), dim_article[statut_rattachement] = "Non rattaché" )
+			RETURN
+			    DIVIDE ( _n, COUNTROWS ( dim_article ) )
+			```
+		formatString: 0.0%
+		displayFolder: 4. Rattachement
+		lineageTag: d01dfdc2-3f49-5839-a738-ac0d3541bc27
+
+	/// Objectif de rattachement automatique (règle Buyvera).
+	measure 'Objectif rattachement' = 0.8
+		formatString: 0%
+		displayFolder: 4. Rattachement
+		lineageTag: a9db232c-ce64-5fe7-9630-96725502defc
+
+	/// Libellé du dernier mois d'indice INSEE disponible (fraîcheur).
+	measure 'Dernier indice chargé' = ```
+			VAR _d = CALCULATE ( MAX ( fact_indice[date] ), REMOVEFILTERS ( fact_indice ), REMOVEFILTERS ( dim_date ) )
+			RETURN
+			    "Indices INSEE à fin " & FORMAT ( _d, "mmmm yyyy" )
+			```
+		displayFolder: 2. Matières
+		lineageTag: bcb2db07-0c53-5d4e-8c8f-e06673eeba45
+
+	column masque
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 814b89bf-f60b-5761-b21f-6342f670c157
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [masque]
+
+		annotation SummarizationSetBy = User
+
+	partition _Mesures = calculated
+		mode: import
+		source = ROW ( "masque", 0 )

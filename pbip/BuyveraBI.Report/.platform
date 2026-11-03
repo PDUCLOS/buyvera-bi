@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Report",
+    "displayName": "BuyveraBI"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "dc442697-d8ec-5043-bc6d-c265aefeb7ea"
+  }
+}

@@ -1,0 +1,87 @@
+/// Matières premières et part non matière, avec la série INSEE source.
+table dim_matiere
+	lineageTag: 83f6804b-756f-586a-b546-1102990ba1a0
+
+	/// Identifiant matière (CU, AL, NI, ZN, FE, PL, NM, CU_T).
+	column matiere_id
+		dataType: string
+		lineageTag: b85ab82f-75ec-514e-9b9f-88185388048e
+		summarizeBy: none
+		sourceColumn: matiere_id
+
+		annotation SummarizationSetBy = User
+
+	/// Libellé de la matière.
+	column libelle
+		dataType: string
+		lineageTag: d591fc35-4cd7-5664-b199-9000140ed0dd
+		summarizeBy: none
+		sourceColumn: libelle
+
+		annotation SummarizationSetBy = User
+
+	/// Source de la série (INSEE BDM ou hypothèse).
+	column source
+		dataType: string
+		lineageTag: f3dd853c-00e2-59be-983e-079ef9293a0c
+		summarizeBy: none
+		sourceColumn: source
+
+		annotation SummarizationSetBy = User
+
+	/// Identifiant de série INSEE (idbank).
+	column idbank
+		dataType: string
+		lineageTag: da0d5412-67a1-5097-bf51-2a290ce1ba17
+		summarizeBy: none
+		sourceColumn: idbank
+
+		annotation SummarizationSetBy = User
+
+	/// Intitulé officiel de la série INSEE.
+	column titre_insee
+		dataType: string
+		lineageTag: 357413a1-b99c-5a18-9db8-ec2e74d1bef6
+		summarizeBy: none
+		sourceColumn: titre_insee
+
+		annotation SummarizationSetBy = User
+
+	/// Unité de la série.
+	column unite
+		dataType: string
+		lineageTag: 1dc72236-4871-510d-8561-24765c48c62a
+		summarizeBy: none
+		sourceColumn: unite
+
+		annotation SummarizationSetBy = User
+
+	/// Vrai si la matière entre dans les compositions d'articles.
+	column utilisee_composition
+		dataType: boolean
+		lineageTag: 9b2ceb6f-599a-5317-9367-9fcdf2c22380
+		summarizeBy: none
+		sourceColumn: utilisee_composition
+
+		annotation SummarizationSetBy = User
+
+	/// Dernier mois disponible au chargement (fraîcheur).
+	column dernier_mois
+		dataType: string
+		lineageTag: 97951480-c7fe-5354-ba3a-731c3c437f9a
+		summarizeBy: none
+		sourceColumn: dernier_mois
+
+		annotation SummarizationSetBy = User
+
+	partition dim_matiere = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document ( File.Contents ( DossierDonnees & "dim_matiere.csv" ), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv] ),
+				    Entetes = Table.PromoteHeaders ( Source, [PromoteAllScalars = true] ),
+				    Types = Table.TransformColumnTypes ( Entetes, {{"matiere_id", type text}, {"libelle", type text}, {"source", type text}, {"idbank", type text}, {"titre_insee", type text}, {"unite", type text}, {"utilisee_composition", type logical}, {"dernier_mois", type text}}, "en-US" )
+				in
+				    Types
+
+	annotation PBI_ResultType = Table

@@ -1,0 +1,5 @@
+/// Acheteur : ne voit que les familles dont il est responsable.
+role Acheteur
+	modelPermission: read
+
+	tablePermission dim_acheteur = dim_acheteur[email] = USERPRINCIPALNAME ()

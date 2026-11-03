@@ -1,0 +1,3 @@
+/// Direction : voit tout (aucun filtre).
+role Direction
+	modelPermission: read

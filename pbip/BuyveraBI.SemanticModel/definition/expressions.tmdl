@@ -1,0 +1,7 @@
+/// Dossier des CSV du modèle (data/processed). À adapter si le projet est déplacé.
+expression DossierDonnees = "E:\Mon Drive\Dashboard\buyvera-bi\data\processed\" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]
+	lineageTag: 2e5bb166-a929-5841-bbd2-97bcb1f8c50d
+
+	annotation PBI_ResultType = Text
+
+	annotation PBI_NavigationStepName = Navigation

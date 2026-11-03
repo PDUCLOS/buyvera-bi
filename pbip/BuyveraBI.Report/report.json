@@ -1,0 +1,62 @@
+{
+  "config": "{\"version\": \"5.59\", \"themeCollection\": {}, \"activeSectionIndex\": 0, \"defaultDrillFilterOtherVisuals\": true, \"linguisticSchemaSyncVersion\": 0, \"settings\": {\"useNewFilterPaneExperience\": true, \"allowChangeFilterTypes\": true, \"useStylableVisualContainerHeader\": true, \"exportDataMode\": 1}, \"objects\": {}}",
+  "layoutOptimization": 0,
+  "resourcePackages": [],
+  "sections": [
+    {
+      "config": "{}",
+      "displayName": "Synthèse campagne",
+      "displayOption": 1,
+      "filters": "[]",
+      "height": 720.0,
+      "name": "ReportSection00",
+      "ordinal": 0,
+      "visualContainers": [],
+      "width": 1280.0
+    },
+    {
+      "config": "{}",
+      "displayName": "Fournisseurs",
+      "displayOption": 1,
+      "filters": "[]",
+      "height": 720.0,
+      "name": "ReportSection01",
+      "ordinal": 1,
+      "visualContainers": [],
+      "width": 1280.0
+    },
+    {
+      "config": "{}",
+      "displayName": "Détail article",
+      "displayOption": 1,
+      "filters": "[]",
+      "height": 720.0,
+      "name": "ReportSection02",
+      "ordinal": 2,
+      "visualContainers": [],
+      "width": 1280.0
+    },
+    {
+      "config": "{}",
+      "displayName": "Matières",
+      "displayOption": 1,
+      "filters": "[]",
+      "height": 720.0,
+      "name": "ReportSection03",
+      "ordinal": 3,
+      "visualContainers": [],
+      "width": 1280.0
+    },
+    {
+      "config": "{}",
+      "displayName": "Rattachement",
+      "displayOption": 1,
+      "filters": "[]",
+      "height": 720.0,
+      "name": "ReportSection04",
+      "ordinal": 4,
+      "visualContainers": [],
+      "width": 1280.0
+    }
+  ]
+}

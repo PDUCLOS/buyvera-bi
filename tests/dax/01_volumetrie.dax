@@ -1,0 +1,10 @@
+EVALUATE
+UNION (
+    ROW ( "table", "dim_article", "lignes", COUNTROWS ( dim_article ) ),
+    ROW ( "table", "fact_tarif", "lignes", COUNTROWS ( fact_tarif ) ),
+    ROW ( "table", "fact_achats", "lignes", COUNTROWS ( fact_achats ) ),
+    ROW ( "table", "fact_indice", "lignes", COUNTROWS ( fact_indice ) ),
+    ROW ( "table", "bridge", "lignes", COUNTROWS ( bridge_composition ) ),
+    ROW ( "table", "dim_date", "lignes", COUNTROWS ( dim_date ) ),
+    ROW ( "table", "prix vides", "lignes", COUNTROWS ( FILTER ( fact_tarif, ISBLANK ( fact_tarif[prix_brut] ) ) ) )
+)

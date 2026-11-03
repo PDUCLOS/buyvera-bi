@@ -1,0 +1,45 @@
+/// Table pont article × matière : part de chaque matière dans le coût de l'article (somme = 1, non matière comprise).
+table bridge_composition
+	lineageTag: 5bf1ca5e-2943-5a28-a1e1-5b05a9e28058
+
+	/// Article.
+	column article_id
+		dataType: string
+		isHidden
+		lineageTag: 44426eac-52cb-55e0-905d-e9f964c81b6d
+		summarizeBy: none
+		sourceColumn: article_id
+
+		annotation SummarizationSetBy = User
+
+	/// Matière.
+	column matiere_id
+		dataType: string
+		isHidden
+		lineageTag: 4a7a9a44-880a-5a43-9530-254f4e76d5ba
+		summarizeBy: none
+		sourceColumn: matiere_id
+
+		annotation SummarizationSetBy = User
+
+	/// Part de la matière dans le coût de l'article (0-1).
+	column part
+		dataType: double
+		formatString: 0.0%
+		lineageTag: 7a4fbfa7-6778-5539-8d92-dfc5af2d39cc
+		summarizeBy: none
+		sourceColumn: part
+
+		annotation SummarizationSetBy = User
+
+	partition bridge_composition = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document ( File.Contents ( DossierDonnees & "bridge_composition.csv" ), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv] ),
+				    Entetes = Table.PromoteHeaders ( Source, [PromoteAllScalars = true] ),
+				    Types = Table.TransformColumnTypes ( Entetes, {{"article_id", type text}, {"matiere_id", type text}, {"part", type number}}, "en-US" )
+				in
+				    Types
+
+	annotation PBI_ResultType = Table

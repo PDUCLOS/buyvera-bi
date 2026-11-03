@@ -1,0 +1,10 @@
+EVALUATE
+ADDCOLUMNS (
+    VALUES ( param_campagne[campagne] ),
+    "valeur_n", [Valeur N],
+    "demandee", [Hausse demandée %],
+    "justifiee", [Hausse justifiée %],
+    "ecart_pts", [Écart pts],
+    "eur_reneg", [€ renégociables],
+    "nb", [Nb articles comparables]
+)

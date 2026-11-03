@@ -13,6 +13,11 @@ Référence complète : `PROJET_BUYVERA_BI.md`. Idées d'évolution : `docs/idee
 1. `python scripts/fetch_indices.py` → `data/raw/insee_*.csv`, `data/processed/fact_indice.csv`, `dim_matiere.csv`
 2. `python scripts/generate_synthetic.py` → autres tables + `data/controle/` (calcul article par article, vérité rattachement)
 3. `python scripts/controles.py` → `docs/rapport_controle.md` (code retour 1 si un contrôle bloquant échoue)
+4. `python scripts/build_pbip.py` → `pbip/` (modèle TMDL, relations, mesures, RLS, pages). **Source unique du modèle** : modifier `build_pbip.py`, pas les `.tmdl` à la main.
+5. Ouvrir `pbip/BuyveraBI.pbip` dans Power BI Desktop (Fichier → Ouvrir ; le double-clic sur une 2e instance ne charge pas le fichier).
+6. Validation : `powershell -File scripts\dax_query.ps1 -Fichier tests\dax\<requête>` interroge le moteur local de Desktop
+   (ADOMD fourni avec Desktop). Si les tables sont vides après ouverture, lancer `tests\dax\actualiser_tout.json` (refresh TMSL).
+   `02_synthese_campagnes.dax` doit redonner exactement la section 6 du rapport de contrôle.
 Toujours relancer les contrôles après une modification des scripts. Le rapport de contrôle fait foi pour les chiffres de référence.
 - La part non matière est la « matière » `NM` : série d'hypothèse à 2 %/an dans `fact_indice`, présente dans `bridge_composition`. La hausse justifiée est donc Σ part × variation sur toutes les lignes du pont.
 - `article_id` = identité vraie de l'article (rattachement supposé validé) ; `statut_rattachement` montre ce que l'automate a trouvé seul.

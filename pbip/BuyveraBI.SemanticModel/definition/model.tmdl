@@ -1,0 +1,33 @@
+model Model
+	culture: fr-FR
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	discourageImplicitMeasures
+	sourceQueryCulture: fr-FR
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation PBI_QueryOrder = ["DossierDonnees", "dim_date", "dim_fournisseur", "dim_famille", "dim_acheteur", "dim_matiere", "dim_article", "bridge_composition", "fact_tarif", "fact_achats", "fact_indice"]
+
+annotation __PBI_TimeIntelligenceEnabled = 0
+
+annotation PBIDesktopVersion = 2.149.1429.0 (25.11)
+
+ref table dim_date
+ref table dim_fournisseur
+ref table dim_famille
+ref table dim_acheteur
+ref table dim_matiere
+ref table dim_article
+ref table bridge_composition
+ref table fact_tarif
+ref table fact_achats
+ref table fact_indice
+ref table param_campagne
+ref table param_fenetre
+ref table _Mesures
+
+ref role Acheteur
+ref role Direction
+
+ref cultureInfo fr-FR

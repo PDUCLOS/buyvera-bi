@@ -1,0 +1,135 @@
+/// Articles achetés, avec le résultat du rattachement référence tarif / référence ERP.
+table dim_article
+	lineageTag: 00a51176-ee22-58dc-b04e-788136727378
+
+	/// Identifiant article (identité unique après rattachement).
+	column article_id
+		dataType: string
+		lineageTag: dae31a7a-388e-59d5-a35c-77cf8bc31f01
+		summarizeBy: none
+		sourceColumn: article_id
+
+		annotation SummarizationSetBy = User
+
+	/// Référence telle qu'écrite dans le tarif fournisseur.
+	column ref_fournisseur
+		dataType: string
+		lineageTag: b1ec3e80-812a-5808-b095-cf52d24f8241
+		summarizeBy: none
+		sourceColumn: ref_fournisseur
+
+		annotation SummarizationSetBy = User
+
+	/// Référence enregistrée dans l'ERP.
+	column ref_erp
+		dataType: string
+		lineageTag: 51b13cac-afa4-5cbd-b1f7-990b52009883
+		summarizeBy: none
+		sourceColumn: ref_erp
+
+		annotation SummarizationSetBy = User
+
+	/// Désignation ERP.
+	column designation
+		dataType: string
+		lineageTag: e09ada3f-c577-5831-9d82-8924c8ed8ebf
+		summarizeBy: none
+		sourceColumn: designation
+
+		annotation SummarizationSetBy = User
+
+	/// Désignation telle qu'écrite dans le tarif fournisseur.
+	column designation_tarif
+		dataType: string
+		lineageTag: d7591313-569a-5b8a-9ec2-a6f57121cbc9
+		summarizeBy: none
+		sourceColumn: designation_tarif
+
+		annotation SummarizationSetBy = User
+
+	/// Famille de l'article.
+	column famille_id
+		dataType: string
+		isHidden
+		lineageTag: 313a2f19-a5f4-5414-87cf-b95d3c907435
+		summarizeBy: none
+		sourceColumn: famille_id
+
+		annotation SummarizationSetBy = User
+
+	/// Fournisseur de l'article.
+	column fournisseur_id
+		dataType: string
+		isHidden
+		lineageTag: d7bbea21-17c6-5509-a6e9-c6d067a10961
+		summarizeBy: none
+		sourceColumn: fournisseur_id
+
+		annotation SummarizationSetBy = User
+
+	/// Unité d'achat.
+	column unite
+		dataType: string
+		lineageTag: a7a24883-2470-5b38-9129-b2f30de2b6bc
+		summarizeBy: none
+		sourceColumn: unite
+
+		annotation SummarizationSetBy = User
+
+	/// Première campagne tarifaire de l'article.
+	column campagne_debut
+		dataType: int64
+		lineageTag: ada4eaff-b1cd-5697-bf45-cac8d4029f2c
+		summarizeBy: none
+		sourceColumn: campagne_debut
+
+		annotation SummarizationSetBy = User
+
+	/// Dernière campagne tarifaire de l'article.
+	column campagne_fin
+		dataType: int64
+		lineageTag: a332aa63-c4c3-5c62-8604-599f4c17fcdd
+		summarizeBy: none
+		sourceColumn: campagne_fin
+
+		annotation SummarizationSetBy = User
+
+	/// Automatique, Proposé (à valider) ou Non rattaché.
+	column statut_rattachement
+		dataType: string
+		lineageTag: 8a3341cf-d8c3-5973-bc19-31ef3f991faf
+		summarizeBy: none
+		sourceColumn: statut_rattachement
+
+		annotation SummarizationSetBy = User
+
+	/// Article ERP proposé par la correspondance sur la désignation.
+	column article_id_propose
+		dataType: string
+		lineageTag: 56780b15-e6bc-5d6b-9871-b3dddcc0fc48
+		summarizeBy: none
+		sourceColumn: article_id_propose
+
+		annotation SummarizationSetBy = User
+
+	/// Similarité de désignation (0-1) ; 1 si rattachement automatique.
+	column score_rattachement
+		dataType: double
+		formatString: 0.00
+		lineageTag: dc7e2646-07c9-5b1a-99e5-67e1906144b6
+		summarizeBy: none
+		sourceColumn: score_rattachement
+
+		annotation SummarizationSetBy = User
+
+	partition dim_article = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document ( File.Contents ( DossierDonnees & "dim_article.csv" ), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv] ),
+				    Entetes = Table.PromoteHeaders ( Source, [PromoteAllScalars = true] ),
+				    Types = Table.TransformColumnTypes ( Entetes, {{"article_id", type text}, {"ref_fournisseur", type text}, {"ref_erp", type text}, {"designation", type text}, {"designation_tarif", type text}, {"famille_id", type text}, {"fournisseur_id", type text}, {"unite", type text}, {"campagne_debut", Int64.Type}, {"campagne_fin", Int64.Type}, {"statut_rattachement", type text}, {"article_id_propose", type text}, {"score_rattachement", type number}}, "en-US" )
+				in
+				    Types
+
+	annotation PBI_ResultType = Table

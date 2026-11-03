@@ -1,0 +1,43 @@
+relationship 5f2603e6-3d8c-5ea0-8f64-4a4e8426f63f
+	fromColumn: fact_tarif.article_id
+	toColumn: dim_article.article_id
+
+relationship 7897ef95-1998-57fd-a95a-cb1b03fc6e1f
+	fromColumn: fact_tarif.date_effet
+	toColumn: dim_date.date
+
+relationship 881fe3dc-19db-51b0-8356-3f5041ff58b0
+	fromColumn: fact_achats.article_id
+	toColumn: dim_article.article_id
+
+relationship 674caa63-7f39-5294-88c0-2e173668cd7d
+	fromColumn: fact_achats.date
+	toColumn: dim_date.date
+
+relationship 68f1a18a-1074-5d97-b051-72e3a9e07b47
+	fromColumn: fact_indice.matiere_id
+	toColumn: dim_matiere.matiere_id
+
+relationship ed9593b5-cf50-54a6-9661-bab17d955401
+	fromColumn: fact_indice.date
+	toColumn: dim_date.date
+
+relationship 7cb37822-a59f-590a-9b9b-979ccc57b41c
+	fromColumn: bridge_composition.article_id
+	toColumn: dim_article.article_id
+
+relationship 99f94d09-353f-56bc-a6e6-aecfe41cc3d4
+	fromColumn: bridge_composition.matiere_id
+	toColumn: dim_matiere.matiere_id
+
+relationship 165bb4c6-cff2-5321-937f-71a2fc1b003b
+	fromColumn: dim_article.fournisseur_id
+	toColumn: dim_fournisseur.fournisseur_id
+
+relationship 0a3ceecd-deaa-577c-9221-bdb9e92dcd0a
+	fromColumn: dim_article.famille_id
+	toColumn: dim_famille.famille_id
+
+relationship 39e3e60d-5522-59a1-80e8-81d1f4cf3e36
+	fromColumn: dim_famille.acheteur_id
+	toColumn: dim_acheteur.acheteur_id

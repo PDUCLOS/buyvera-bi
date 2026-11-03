@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "SemanticModel",
+    "displayName": "BuyveraBI"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "559fca45-0cc5-53fe-a7a2-e02793c61ba6"
+  }
+}

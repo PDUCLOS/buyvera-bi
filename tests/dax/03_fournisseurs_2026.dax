@@ -1,0 +1,11 @@
+EVALUATE
+ADDCOLUMNS (
+    VALUES ( dim_fournisseur[nom] ),
+    "demandee", [Hausse demandée %],
+    "justifiee", [Hausse justifiée %],
+    "ecart", [Écart pts],
+    "eur", [€ renégociables],
+    "cliquet", [Effet cliquet],
+    "auto", [% rattachés auto]
+)
+ORDER BY [eur] DESC

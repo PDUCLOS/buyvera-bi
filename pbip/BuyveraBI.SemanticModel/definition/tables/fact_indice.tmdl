@@ -1,0 +1,48 @@
+/// Indices matières mensuels réels (INSEE BDM) et série d'hypothèse non matière à 2 %/an.
+table fact_indice
+	lineageTag: c5b5fdd2-f7b8-5682-98f9-6df427687585
+
+	/// Matière.
+	column matiere_id
+		dataType: string
+		isHidden
+		lineageTag: 725bf4b7-57c5-59ab-8c9b-5f0a7ac3bbdd
+		summarizeBy: none
+		sourceColumn: matiere_id
+
+		annotation SummarizationSetBy = User
+
+	/// Mois de l'indice (1er du mois).
+	column date
+		dataType: dateTime
+		formatString: Short Date
+		isHidden
+		lineageTag: 9279bf07-9185-56d7-b549-81e29f1b1308
+		summarizeBy: none
+		sourceColumn: date
+
+		annotation UnderlyingDateTimeDataType = Date
+
+		annotation SummarizationSetBy = User
+
+	/// Valeur de l'indice (base 2010 en euros, ou €/t pour CU_T).
+	column valeur_eur
+		dataType: double
+		formatString: #,0.0
+		lineageTag: 1a622b88-28b9-5428-994c-7892bd844f33
+		summarizeBy: none
+		sourceColumn: valeur_eur
+
+		annotation SummarizationSetBy = User
+
+	partition fact_indice = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document ( File.Contents ( DossierDonnees & "fact_indice.csv" ), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv] ),
+				    Entetes = Table.PromoteHeaders ( Source, [PromoteAllScalars = true] ),
+				    Types = Table.TransformColumnTypes ( Entetes, {{"matiere_id", type text}, {"date", type date}, {"valeur_eur", type number}}, "en-US" )
+				in
+				    Types
+
+	annotation PBI_ResultType = Table

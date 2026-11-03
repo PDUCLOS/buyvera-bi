@@ -1,0 +1,71 @@
+/// Fournisseurs (fictifs).
+table dim_fournisseur
+	lineageTag: e6742a49-a09e-5f1b-90c6-175172e7d869
+
+	/// Identifiant fournisseur (F01-F12).
+	column fournisseur_id
+		dataType: string
+		lineageTag: 92194ba0-fde3-5d22-a3dd-d4ba23978e18
+		summarizeBy: none
+		sourceColumn: fournisseur_id
+
+		annotation SummarizationSetBy = User
+
+	/// Raison sociale fictive.
+	column nom
+		dataType: string
+		lineageTag: 9921f15a-47de-5609-b9d7-e58e080ab4fe
+		summarizeBy: none
+		sourceColumn: nom
+
+		annotation SummarizationSetBy = User
+
+	/// Pays (code ISO).
+	column pays
+		dataType: string
+		lineageTag: abd4088c-ca4b-5dde-8038-cf0aebc86563
+		summarizeBy: none
+		sourceColumn: pays
+
+		annotation SummarizationSetBy = User
+
+	/// Devise de facturation.
+	column devise
+		dataType: string
+		lineageTag: d7b1e6e0-153c-55d7-9935-1eaeea81ced4
+		summarizeBy: none
+		sourceColumn: devise
+
+		annotation SummarizationSetBy = User
+
+	/// Préfixe ajouté par le fournisseur dans ses références tarif.
+	column prefixe_tarif
+		dataType: string
+		isHidden
+		lineageTag: b4705525-1db3-5718-b1a4-cc07e85c131c
+		summarizeBy: none
+		sourceColumn: prefixe_tarif
+
+		annotation SummarizationSetBy = User
+
+	/// Comportement injecté dans les données synthétiques (caché, sert aux tests).
+	column profil
+		dataType: string
+		isHidden
+		lineageTag: 4ceb3916-b123-5e33-acdd-63c9ad3e749d
+		summarizeBy: none
+		sourceColumn: profil
+
+		annotation SummarizationSetBy = User
+
+	partition dim_fournisseur = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document ( File.Contents ( DossierDonnees & "dim_fournisseur.csv" ), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv] ),
+				    Entetes = Table.PromoteHeaders ( Source, [PromoteAllScalars = true] ),
+				    Types = Table.TransformColumnTypes ( Entetes, {{"fournisseur_id", type text}, {"nom", type text}, {"pays", type text}, {"devise", type text}, {"prefixe_tarif", type text}, {"profil", type text}}, "en-US" )
+				in
+				    Types
+
+	annotation PBI_ResultType = Table

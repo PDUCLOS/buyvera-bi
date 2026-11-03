@@ -6,7 +6,7 @@ Généré par `scripts/controles.py`. Tarifs et volumes synthétiques, indices m
 
 | table | lignes |
 |---|---|
-| dim_date | 60 |
+| dim_date | 1826 |
 | dim_fournisseur | 12 |
 | dim_famille | 8 |
 | dim_acheteur | 3 |

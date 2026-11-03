@@ -1,0 +1,20 @@
+/// Période de référence de la variation matière, en mois avant chaque campagne.
+table param_fenetre
+	lineageTag: fdd88d61-4bb6-5f65-8e4e-02daf043f14c
+
+	/// Période de référence de la variation matière, en mois avant chaque campagne.
+	column mois
+		dataType: int64
+		formatString: 0
+		lineageTag: 099c3c18-8571-543b-8f3f-ace87f3d4d92
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [mois]
+
+		annotation SummarizationSetBy = User
+
+	partition param_fenetre = calculated
+		mode: import
+		source = DATATABLE ( "mois", INTEGER, { { 3 }, { 6 }, { 12 } } )
+
+	annotation PBI_Id = 4b77fe47d3c85752a3f85eb1775adfd3

@@ -350,14 +350,18 @@ def rattacher(articles: pd.DataFrame) -> pd.DataFrame:
 
 
 def dim_date() -> pd.DataFrame:
-    mois = pd.date_range("2022-01-01", "2026-12-01", freq="MS")
+    """Table de dates journalière continue (exigée pour « Marquer comme table de dates »).
+    Les faits sont mensuels et pointent sur le 1er du mois."""
+    jours = pd.date_range("2022-01-01", "2026-12-31", freq="D")
     noms = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."]
     return pd.DataFrame({
-        "date": mois.date, "annee": mois.year, "mois": mois.month,
-        "libelle_mois": [f"{noms[m.month - 1]} {m.year}" for m in mois],
-        "annee_mois": mois.strftime("%Y-%m"),
-        "trimestre": "T" + mois.quarter.astype(str),
-        "campagne": mois.year,  # tarif en vigueur sur le mois
+        "date": jours.date, "annee": jours.year, "mois": jours.month,
+        "libelle_mois": [f"{noms[j.month - 1]} {j.year}" for j in jours],
+        "annee_mois": jours.strftime("%Y-%m"),
+        "cle_mois": jours.year * 100 + jours.month,
+        "trimestre": "T" + jours.quarter.astype(str),
+        "debut_mois": jours.day == 1,
+        "campagne": jours.year,  # tarif en vigueur à cette date
     })
 
 

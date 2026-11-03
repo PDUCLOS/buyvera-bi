@@ -1,0 +1,104 @@
+/// Calendrier journalier 2022-2026. Les faits mensuels pointent sur le 1er du mois.
+table dim_date
+	lineageTag: 970d1bf9-c133-501f-8048-9068373ca812
+	dataCategory: Time
+
+	/// Date du jour.
+	column date
+		dataType: dateTime
+		formatString: Short Date
+		isKey
+		lineageTag: 1a993579-a431-58eb-98e0-d1ead39aab20
+		summarizeBy: none
+		sourceColumn: date
+
+		annotation UnderlyingDateTimeDataType = Date
+
+		annotation SummarizationSetBy = User
+
+	/// Année civile.
+	column annee
+		dataType: int64
+		lineageTag: a9e17e71-4679-53d7-a8db-7b47bf797b79
+		summarizeBy: none
+		sourceColumn: annee
+
+		annotation SummarizationSetBy = User
+
+	/// Numéro du mois (1-12).
+	column mois
+		dataType: int64
+		lineageTag: 8537eaff-7034-525c-a666-77c7d588878a
+		summarizeBy: none
+		sourceColumn: mois
+
+		annotation SummarizationSetBy = User
+
+	/// Mois en clair (« janv. 2026 »).
+	column libelle_mois
+		dataType: string
+		lineageTag: b3fc9e67-3e94-5213-b83f-ee989d7cea59
+		summarizeBy: none
+		sourceColumn: libelle_mois
+		sortByColumn: cle_mois
+
+		annotation SummarizationSetBy = User
+
+	/// Mois au format AAAA-MM.
+	column annee_mois
+		dataType: string
+		lineageTag: 6bc9b878-2f21-5ccf-88a5-bbf721d89780
+		summarizeBy: none
+		sourceColumn: annee_mois
+
+		annotation SummarizationSetBy = User
+
+	/// Clé de tri AAAAMM.
+	column cle_mois
+		dataType: int64
+		isHidden
+		lineageTag: d0d9f202-a2bd-52e2-a2a5-a71ad28444e4
+		summarizeBy: none
+		sourceColumn: cle_mois
+
+		annotation SummarizationSetBy = User
+
+	/// Trimestre (T1 à T4).
+	column trimestre
+		dataType: string
+		lineageTag: 76419d8c-e261-5199-b932-4475b60b0c62
+		summarizeBy: none
+		sourceColumn: trimestre
+
+		annotation SummarizationSetBy = User
+
+	/// Vrai le 1er du mois.
+	column debut_mois
+		dataType: boolean
+		isHidden
+		lineageTag: 8d19a2bd-fb9a-5e58-b5da-291b2620ab46
+		summarizeBy: none
+		sourceColumn: debut_mois
+
+		annotation SummarizationSetBy = User
+
+	/// Campagne tarifaire en vigueur à cette date (tarif au 1er janvier).
+	column campagne
+		dataType: int64
+		lineageTag: a56fd55c-fc62-58c0-a869-a771902ef4f6
+		summarizeBy: none
+		sourceColumn: campagne
+
+		annotation SummarizationSetBy = User
+
+	partition dim_date = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document ( File.Contents ( DossierDonnees & "dim_date.csv" ), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv] ),
+				    Entetes = Table.PromoteHeaders ( Source, [PromoteAllScalars = true] ),
+				    Types = Table.TransformColumnTypes ( Entetes, {{"date", type date}, {"annee", Int64.Type}, {"mois", Int64.Type}, {"libelle_mois", type text}, {"annee_mois", type text}, {"cle_mois", Int64.Type}, {"trimestre", type text}, {"debut_mois", type logical}, {"campagne", Int64.Type}}, "en-US" )
+				in
+				    Types
+
+	annotation PBI_ResultType = Table

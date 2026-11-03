@@ -2,5 +2,5 @@ __pycache__/
 *.pyc
 .venv/
 *.pbix
-.pbi/localSettings.json
-.pbi/cache.abf
+**/.pbi/localSettings.json
+**/.pbi/cache.abf

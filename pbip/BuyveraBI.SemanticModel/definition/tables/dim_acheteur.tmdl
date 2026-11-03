@@ -1,0 +1,60 @@
+/// Acheteurs. L'email sert à la sécurité par ligne (RLS).
+table dim_acheteur
+	lineageTag: 55197788-9e2d-57ce-8f0d-b61587b742a5
+
+	/// Identifiant acheteur.
+	column acheteur_id
+		dataType: string
+		lineageTag: fb6a8722-ea79-5e1d-8ad9-0a3b03cdd03d
+		summarizeBy: none
+		sourceColumn: acheteur_id
+
+		annotation SummarizationSetBy = User
+
+	/// Nom de l'acheteur (fictif).
+	column nom
+		dataType: string
+		lineageTag: fa3d2ba7-0bb9-5a95-80d8-83554c809ede
+		summarizeBy: none
+		sourceColumn: nom
+
+		annotation SummarizationSetBy = User
+
+	/// Email de connexion, comparé à USERPRINCIPALNAME() par le rôle Acheteur.
+	column email
+		dataType: string
+		lineageTag: c7f12cd4-b84e-5de7-bac8-07922f1856aa
+		summarizeBy: none
+		sourceColumn: email
+
+		annotation SummarizationSetBy = User
+
+	/// Rôle : Acheteur ou Direction.
+	column role
+		dataType: string
+		lineageTag: 36f64d1f-b4f9-5de0-aa57-7dc036dd5981
+		summarizeBy: none
+		sourceColumn: role
+
+		annotation SummarizationSetBy = User
+
+	/// Univers couvert.
+	column perimetre
+		dataType: string
+		lineageTag: 5554d44d-e5cc-5462-9472-8c8f8ef96c09
+		summarizeBy: none
+		sourceColumn: perimetre
+
+		annotation SummarizationSetBy = User
+
+	partition dim_acheteur = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document ( File.Contents ( DossierDonnees & "dim_acheteur.csv" ), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv] ),
+				    Entetes = Table.PromoteHeaders ( Source, [PromoteAllScalars = true] ),
+				    Types = Table.TransformColumnTypes ( Entetes, {{"acheteur_id", type text}, {"nom", type text}, {"email", type text}, {"role", type text}, {"perimetre", type text}}, "en-US" )
+				in
+				    Types
+
+	annotation PBI_ResultType = Table

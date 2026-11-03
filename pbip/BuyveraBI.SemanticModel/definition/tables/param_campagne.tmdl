@@ -1,0 +1,20 @@
+/// Campagne N+1 analysée (comparée à la campagne N = N+1 − 1). Table déconnectée pour le segment.
+table param_campagne
+	lineageTag: c8dd4a84-a665-5db1-bd71-718a783aa017
+
+	/// Campagne N+1 analysée (comparée à la campagne N = N+1 − 1). Table déconnectée pour le segment.
+	column campagne
+		dataType: int64
+		formatString: 0
+		lineageTag: 5ef80717-9bc6-5338-b5f0-47af3c4968e1
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [campagne]
+
+		annotation SummarizationSetBy = User
+
+	partition param_campagne = calculated
+		mode: import
+		source = DATATABLE ( "campagne", INTEGER, { { 2024 }, { 2025 }, { 2026 } } )
+
+	annotation PBI_Id = 304b08245c5c5a0583ab7e72a4a8b877

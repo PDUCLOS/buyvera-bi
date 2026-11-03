@@ -1,0 +1,2 @@
+EVALUATE
+ADDCOLUMNS ( VALUES ( dim_matiere[libelle] ), "var2026", [Variation matière %] )

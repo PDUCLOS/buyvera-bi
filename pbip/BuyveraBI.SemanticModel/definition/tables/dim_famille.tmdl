@@ -1,0 +1,52 @@
+/// Familles de produits, rattachées à un univers et à un acheteur.
+table dim_famille
+	lineageTag: 7222c3c1-ffaa-5aa1-bdfd-b5d8391deb05
+
+	/// Identifiant famille.
+	column famille_id
+		dataType: string
+		lineageTag: 93135af1-3057-5436-a289-42f40c2842f1
+		summarizeBy: none
+		sourceColumn: famille_id
+
+		annotation SummarizationSetBy = User
+
+	/// Libellé de la famille.
+	column libelle
+		dataType: string
+		lineageTag: 02df2442-ae44-54c8-aca6-602ebc3fb372
+		summarizeBy: none
+		sourceColumn: libelle
+
+		annotation SummarizationSetBy = User
+
+	/// Univers : Transmission ou CVC.
+	column univers
+		dataType: string
+		lineageTag: e015c892-98b9-5c7c-8520-7f6684cb752c
+		summarizeBy: none
+		sourceColumn: univers
+
+		annotation SummarizationSetBy = User
+
+	/// Acheteur responsable de la famille.
+	column acheteur_id
+		dataType: string
+		isHidden
+		lineageTag: f1f35758-e812-5993-88fd-ff374f1265a5
+		summarizeBy: none
+		sourceColumn: acheteur_id
+
+		annotation SummarizationSetBy = User
+
+	partition dim_famille = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document ( File.Contents ( DossierDonnees & "dim_famille.csv" ), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv] ),
+				    Entetes = Table.PromoteHeaders ( Source, [PromoteAllScalars = true] ),
+				    Types = Table.TransformColumnTypes ( Entetes, {{"famille_id", type text}, {"libelle", type text}, {"univers", type text}, {"acheteur_id", type text}}, "en-US" )
+				in
+				    Types
+
+	annotation PBI_ResultType = Table
