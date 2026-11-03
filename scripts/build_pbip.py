@@ -430,6 +430,74 @@ PAGES = [
 # --------------------------------------------------------------------------------------
 # Écriture TMDL
 # --------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------
+# Design : thème, barre de navigation latérale, zone de contenu
+# --------------------------------------------------------------------------------------
+NAVY, NAVY_2, TEAL, AMBRE, FOND, BORD, TEXTE, GRIS = (
+    "#0F172A", "#1E293B", "#0F766E", "#F59E0B", "#F1F5F9", "#E2E8F0", "#0F172A", "#64748B")
+LARGEUR_NAV = 200
+ICONES = ["◉", "◎", "▤", "≋", "⇄"]
+
+THEME = {
+    "name": "Buyvera",
+    "dataColors": [TEAL, AMBRE, "#2563EB", "#DC2626", "#7C3AED", "#059669", "#DB2777", "#64748B",
+                   "#0EA5E9", "#84CC16", "#F97316", "#A855F7"],
+    "background": "#FFFFFF", "foreground": TEXTE, "tableAccent": TEAL,
+    "good": "#059669", "neutral": AMBRE, "bad": "#DC2626",
+    "textClasses": {
+        "title": {"fontFace": "Segoe UI Semibold", "fontSize": 11, "color": "#334155"},
+        "label": {"fontFace": "Segoe UI", "fontSize": 9, "color": "#475569"},
+        "callout": {"fontFace": "Segoe UI Semibold", "fontSize": 26, "color": TEXTE},
+        "header": {"fontFace": "Segoe UI Semibold", "fontSize": 10, "color": "#334155"},
+    },
+    "visualStyles": {
+        "*": {"*": {
+            "background": [{"show": True, "color": {"solid": {"color": "#FFFFFF"}}, "transparency": 0}],
+            "border": [{"show": True, "color": {"solid": {"color": BORD}}, "radius": 12}],
+            "dropShadow": [{"show": True, "color": {"solid": {"color": NAVY}}, "transparency": 88,
+                            "position": "Outer", "preset": "BottomRight", "shadowBlur": 10, "shadowDistance": 2}],
+            "padding": [{"top": 8, "bottom": 8, "left": 12, "right": 12}],
+            "title": [{"show": True, "fontColor": {"solid": {"color": "#334155"}}, "fontSize": 11}],
+        }},
+        "page": {"*": {
+            "background": [{"color": {"solid": {"color": FOND}}, "transparency": 0}],
+            "outspace": [{"color": {"solid": {"color": FOND}}, "transparency": 0}],
+        }},
+        **{t: {"*": {"background": [{"show": False}], "border": [{"show": False}],
+                     "dropShadow": [{"show": False}], "title": [{"show": False}],
+                     "padding": [{"top": 0, "bottom": 0, "left": 0, "right": 0}]}}
+           for t in ("textbox", "actionButton", "shape")},
+        "tableEx": {"*": {"grid": [{"gridHorizontal": True, "gridHorizontalColor": {"solid": {"color": BORD}},
+                                     "rowPadding": 3}],
+                          "columnHeaders": [{"fontColor": {"solid": {"color": "#FFFFFF"}},
+                                             "backColor": {"solid": {"color": NAVY_2}}}],
+                          "values": [{"backColorSecondary": {"solid": {"color": "#F8FAFC"}}}]}},
+        "slicer": {"*": {"header": [{"fontColor": {"solid": {"color": GRIS}}, "textSize": 9}]}},
+        "card": {"*": {"labels": [{"color": {"solid": {"color": TEXTE}}}]}},
+    },
+}
+
+
+def barre_navigation(page: int) -> list[dict]:
+    """Bandeau bleu marine à gauche : logo, un bouton par page (page active en teal), sources."""
+    l = [v("shape", 0, 0, LARGEUR_NAV, 720, objets={"couleur": NAVY}),
+         v("textbox", 18, 22, 170, 70, texte=("Buyvera BI", "Analyse des hausses tarifaires"),
+           objets={"blanc": True})]
+    for i, (nom, _) in enumerate(PAGES):
+        l.append(v("nav", 12, 120 + i * 52, LARGEUR_NAV - 24, 42,
+                   objets={"cible": i, "texte": f"{ICONES[i]}   {nom}", "actif": i == page}))
+    l.append(v("textbox", 18, 640, 170, 60,
+               texte=("Sources", "Indices INSEE réels · tarifs, volumes et fournisseurs fictifs"),
+               objets={"blanc": True, "petit": True}))
+    return l
+
+
+def recaler(d: dict) -> dict:
+    """Place un visuel conçu sur 20-1260 px dans la zone de contenu, à droite de la barre."""
+    ech = (1280 - LARGEUR_NAV - 30) / 1240
+    return {**d, "x": round(LARGEUR_NAV + 10 + (d["x"] - 20) * ech), "w": round(d["w"] * ech)}
+
+
 def desc(texte: str, indent: str) -> list[str]:
     return [f"{indent}/// {texte}"]
 
@@ -567,9 +635,39 @@ def visuel(page: int, i: int, d: dict) -> dict:
     vc: dict = {}
     if d["typ"] == "textbox":
         titre, sous = d["texte"]
+        blanc, petit = d["objets"].get("blanc"), d["objets"].get("petit")
+        c1, c2 = ("#FFFFFF", "#94A3B8") if blanc else (TEXTE, GRIS)
+        t1, t2 = ("10pt", "8pt") if petit else (("16pt", "9pt") if blanc else ("20pt", "10pt"))
         sv["objects"] = {"general": [{"properties": {"paragraphs": [
-            {"textRuns": [{"value": titre, "textStyle": {"fontWeight": "bold", "fontSize": "20pt"}}]},
-            {"textRuns": [{"value": sous, "textStyle": {"fontSize": "10pt", "color": "#605E5C"}}]}]}}]}
+            {"textRuns": [{"value": titre, "textStyle": {"fontWeight": "bold", "fontSize": t1, "color": c1,
+                                                         "fontFamily": "Segoe UI Semibold"}}]},
+            {"textRuns": [{"value": sous, "textStyle": {"fontSize": t2, "color": c2}}]}]}}]}
+    elif d["typ"] == "shape":
+        sv["objects"] = {
+            "shape": [{"properties": {"tileShape": lit("rectangle")}}],
+            "fill": [{"properties": {"fillColor": {"solid": {"color": lit(d["objets"]["couleur"])}},
+                                     "transparency": lit(0)}}],
+            "line": [{"properties": {"weight": lit(0), "lineColor": {"solid": {"color": lit(d["objets"]["couleur"])}}}}]}
+    elif d["typ"] == "nav":
+        sv["visualType"] = "actionButton"
+        o = d["objets"]
+        fond, texte = (TEAL, "#FFFFFF") if o["actif"] else (NAVY, "#CBD5E1")
+        def etat(sel: str, props: dict) -> dict:
+            return {"properties": props, "selector": {"id": sel}}
+        sv["objects"] = {
+            "icon": [etat("default", {"show": lit(False)})],
+            "text": [etat("default", {"show": lit(True), "text": lit(o["texte"]), "fontColor": {"solid": {"color": lit(texte)}},
+                                      "fontSize": lit(11), "fontFamily": lit("Segoe UI Semibold"),
+                                      "horizontalAlignment": lit("left"), "leftMargin": lit(14)}),
+                     etat("hover", {"fontColor": {"solid": {"color": lit("#FFFFFF")}}})],
+            "fill": [etat("default", {"show": lit(True), "fillColor": {"solid": {"color": lit(fond)}}, "transparency": lit(0)}),
+                     etat("hover", {"fillColor": {"solid": {"color": lit(TEAL if o["actif"] else NAVY_2)}}})],
+            "outline": [etat("default", {"show": lit(False)})],
+            "shape": [{"properties": {"tileShape": lit("rectangleRounded"), "roundEdge": lit(8)}}],
+        }
+        vc["visualLink"] = [{"properties": {"show": lit(True), "type": lit("PageNavigation"),
+                                            "navigationSection": lit(f"ReportSection{o['cible']:02d}")}}]
+        vc["title"] = [{"properties": {"show": lit(False)}}]
     else:
         q = Requete()
         select, proj = [], {}
@@ -702,14 +800,21 @@ def construire(dossier_donnees: str) -> None:
     sections = [{
         "config": "{}", "displayName": p, "displayOption": 1, "filters": "[]",
         "height": 720.0, "name": f"ReportSection{i:02d}", "ordinal": i,
-        "visualContainers": [visuel(i, j, d) for j, d in enumerate(visuels)],
+        "visualContainers": [visuel(i, j, d) for j, d in
+                             enumerate(barre_navigation(i) + [recaler(x) for x in visuels])],
         "width": 1280.0} for i, (p, visuels) in enumerate(PAGES)]
-    config = {"version": "5.59", "themeCollection": {}, "activeSectionIndex": 0,
+    ecrire_json(RPT / "StaticResources" / "RegisteredResources" / "BuyveraTheme.json", THEME)
+    theme = {"customTheme": {"name": "BuyveraTheme.json", "version": "5.59", "type": 2}}
+    config = {"version": "5.59", "themeCollection": theme, "activeSectionIndex": 0,
               "defaultDrillFilterOtherVisuals": True, "linguisticSchemaSyncVersion": 0,
               "settings": {"useNewFilterPaneExperience": True, "allowChangeFilterTypes": True,
                            "useStylableVisualContainerHeader": True, "exportDataMode": 1}, "objects": {}}
     ecrire_json(RPT / "report.json", {"config": json.dumps(config), "layoutOptimization": 0,
-                                      "resourcePackages": [], "sections": sections})
+                                      "resourcePackages": [{"resourcePackage": {
+                                          "disabled": False, "name": "RegisteredResources", "type": 1,
+                                          "items": [{"name": "BuyveraTheme.json", "path": "BuyveraTheme.json",
+                                                     "type": 202}]}}],
+                                      "sections": sections})
     ecrire_json(RPT / "definition.pbir", {
         "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definitionProperties/1.0.0/schema.json",
         "version": "1.0",
