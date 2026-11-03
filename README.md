@@ -1,7 +1,7 @@
 # Buyvera BI : cette hausse fournisseur est-elle justifiée ?
 
 Chaque année, les fournisseurs envoient leurs nouveaux tarifs avec une hausse « justifiée par les matières premières ».
-Ce projet Power BI compare la hausse demandée avec l'évolution **réelle** des matières qui composent chaque produit
+Ce projet Power BI, aux couleurs de Buyvera, compare la hausse demandée avec l'évolution **réelle** des matières qui composent chaque produit
 (indices INSEE), et dit à l'acheteur, fournisseur par fournisseur, combien d'euros il peut renégocier, et ce qu'il
 doit anticiper pour la campagne suivante.
 
@@ -19,13 +19,15 @@ distribution industrielle (transmission mécanique et CVC).
 
 | Page | Question à laquelle elle répond |
 |---|---|
+| **Parcours négociation** | Point d'entrée : 5 étapes (détecter, chiffrer, cibler, comprendre, négocier), chacune ouvre sa page ; courbe prix fournisseurs vs coût matière. |
 | **Synthèse campagne** | Combien d'euros renégocier, chez qui, sur quelles familles ? |
 | **Fournisseurs** | Qui demande plus que ses matières ne le justifient ? Nuage animé 2024 → 2026, classement avec statut. |
 | **Détail article** | De quoi est fait cet article, comment ont évolué ses matières et son prix sur 4 campagnes ? |
 | **Matières** | Quels indices bougent ? Fenêtre de référence (3, 6, 12 mois) et **décalage d'application** paramétrables, délai de répercussion des hausses vs des baisses. |
 | **Rattachement** | Quelle part des références tarif se rattache seule à l'ERP (objectif 80 %) ? Liste des propositions à valider. |
 | **Alertes matières** | Ce qui monte ou baisse avant que le commercial ne le dise : signal 3 mois, plafond justifié pour la campagne suivante, articles exposés et plan d'action (convoquer le commercial, préparer la défense, limiter ou anticiper les achats). |
-| **Fiche négociation** | Tout pour le rendez-vous : statut, argument rédigé, levier matière, historique, **simulateur de contre-proposition**. |
+| **Prix & volumes** | Année sur année, à date : montant, volumes, **effet prix à volumes constants**, surcoût par fournisseur, une courbe de volumes par année. |
+| **Fiche négociation** | Tout pour le rendez-vous : statut, argument rédigé, **courbe de décalage prix vs coût matière**, levier matière coloré, **simulateur de contre-proposition**. Accessible par clic droit → Extraire depuis n'importe quel fournisseur. |
 
 | Fournisseurs | Alertes matières | Fiche négociation |
 |---|---|---|

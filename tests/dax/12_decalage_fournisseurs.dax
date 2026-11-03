@@ -1,0 +1,6 @@
+EVALUATE
+ADDCOLUMNS ( VALUES ( dim_fournisseur[nom] ),
+    "prix_sept26", CALCULATE ( [Indice prix fournisseur], dim_date[date] = DATE ( 2026, 9, 1 ) ),
+    "matiere_sept26", CALCULATE ( [Indice coût matière], dim_date[date] = DATE ( 2026, 9, 1 ) ),
+    "ecart", CALCULATE ( [Écart prix / matière (pts)], dim_date[date] = DATE ( 2026, 9, 1 ) ) )
+ORDER BY [ecart] DESC

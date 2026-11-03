@@ -654,6 +654,10 @@ RETURN
      """VAR _t = FILTER ( fact_achats, NOT ISBLANK ( fact_achats[prix_unitaire] ) && NOT ISBLANK ( fact_achats[prix_unitaire_n1] ) )
 RETURN
     SUMX ( _t, fact_achats[quantite] * ( fact_achats[prix_unitaire] - fact_achats[prix_unitaire_n1] ) )"""),
+    ("Couleur variation", "6. Négociation", "", "Vert marque si la matière baisse (levier acheteur), ambre signal si elle monte.",
+     """VAR _v = [Variation matière article %]
+RETURN
+    IF ( ISBLANK ( _v ), "#56655F", IF ( _v < 0, "#0F5C4A", "#C9781C" ) )"""),
     ("Nb fournisseurs à renégocier", "6. Négociation", "0", "Fournisseurs dont l'écart dépasse 3 points.",
      "COUNTROWS ( FILTER ( VALUES ( dim_fournisseur[nom] ), [Écart pts] > 3 ) )"),
     ("Conseil appro", "7. Alertes", "",
@@ -891,7 +895,7 @@ PAGES = [
         v("lineChart", 20, 260, 610, 440,
           {"Category": [("c", "dim_date", "mois_court")], "Series": [("c", "dim_date", "annee")], "Y": [m("Quantité achetée")]},
           titre="Volumes par mois : une courbe par année", ordre=(("c", "dim_date", "mois_court"), 1),
-          filtres=[(("c", "dim_date", "annee"), [2023, 2024, 2025, 2026])]),
+          filtres=[(("c", "dim_date", "annee"), [2024, 2025, 2026])]),
         v("tableEx", 650, 260, 610, 440,
           {"Values": [FOURN, m("Montant achats"), m("Évol. montant %"), m("Évol. volume %"), m("Effet prix %"), m("Surcoût prix €")]},
           titre="Par fournisseur, 2026 à date vs 2025 · clic droit → Extraire → Fiche", ordre=(m("Surcoût prix €"), 2),
@@ -922,8 +926,8 @@ PAGES = [
           titre="Décalage : son prix vs le coût de ses matières (base 100 = 2023)", objets={"continu": True}),
         v("clusteredBarChart", 650, 400, 610, 300,
           {"Category": [("c", "dim_matiere", "libelle")], "Y": [m("Variation matière article %")]},
-          titre="Matières de son panier : variation sur la fenêtre", ordre=(m("Variation matière article %"), 1),
-          objets={"labels": True}),
+          titre="Matières de son panier : vert = baisse (levier), ambre = hausse", ordre=(m("Variation matière article %"), 1),
+          objets={"labels": True, "couleur_barres": "Couleur variation"}),
     ]),
 ]
 
@@ -947,6 +951,7 @@ ORDRE = ["Parcours négociation", "Synthèse campagne", "Alertes matières", "Fo
          "Prix & volumes", "Détail article", "Matières", "Rattachement"]
 PAGES.sort(key=lambda p: ORDRE.index(p[0]))
 ICONES = ["➜", "◉", "⚑", "◎", "✎", "€", "▤", "≋", "⇄"]
+COURT = {"Parcours négociation": "Parcours"}  # libellés de navigation raccourcis
 # Pages cibles d'extraction (clic droit → Extraire) : champ transmis
 EXTRACTION = {"Fiche négociation": ("dim_fournisseur", "nom"), "Détail article": ("dim_article", "designation")}
 
@@ -1020,7 +1025,7 @@ def barre_navigation(page: int) -> list[dict]:
            objets={"blanc": True})]
     for i, (nom, _) in enumerate(PAGES):
         l.append(v("nav", 12, 108 + i * 50, LARGEUR_NAV - 24, 40,
-                   objets={"cible": i, "texte": f"{ICONES[i]}   {nom}", "actif": i == page}))
+                   objets={"cible": i, "texte": f"{ICONES[i]}   {COURT.get(nom, nom)}", "actif": i == page}))
     l.append(v("textbox", 14, 640, 180, 70,
                texte=("Sources", "Indices INSEE réels · tarifs, volumes et fournisseurs fictifs"),
                objets={"blanc": True, "petit": True}))

@@ -653,6 +653,15 @@ table _Mesures
 		displayFolder: 3. Achats
 		lineageTag: 7c46ec74-ec33-5a67-95c4-4daa428ae882
 
+	/// Vert marque si la matière baisse (levier acheteur), ambre signal si elle monte.
+	measure 'Couleur variation' = ```
+			VAR _v = [Variation matière article %]
+			RETURN
+			    IF ( ISBLANK ( _v ), "#56655F", IF ( _v < 0, "#0F5C4A", "#C9781C" ) )
+			```
+		displayFolder: 6. Négociation
+		lineageTag: 103be757-103a-52b3-ae4b-c02a99c6ba8c
+
 	/// Fournisseurs dont l'écart dépasse 3 points.
 	measure 'Nb fournisseurs à renégocier' = COUNTROWS ( FILTER ( VALUES ( dim_fournisseur[nom] ), [Écart pts] > 3 ) )
 		formatString: 0

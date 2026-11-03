@@ -1,0 +1,5 @@
+EVALUATE
+ADDCOLUMNS ( FILTER ( VALUES ( dim_date[annee] ), dim_date[annee] >= 2024 && dim_date[annee] <= 2026 ),
+    "montant", [Montant achats], "montant_n1", [Montant N-1], "evol_montant", [Évol. montant %],
+    "volume", [Quantité achetée], "volume_n1", [Quantité N-1], "evol_volume", [Évol. volume %],
+    "effet_prix", [Effet prix %], "surcout", [Surcoût prix €] )

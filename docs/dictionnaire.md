@@ -2,7 +2,7 @@
 
 Généré par `scripts/export_dictionary.py` depuis le modèle TMDL (`pbip/BuyveraBI.SemanticModel`). Ne pas modifier à la main.
 
-17 tables · 80 colonnes · 53 mesures · 14 relations · 2 rôles
+18 tables · 86 colonnes · 64 mesures · 16 relations · 2 rôles
 
 ## Sommaire
 
@@ -18,6 +18,7 @@ Généré par `scripts/export_dictionary.py` depuis le modèle TMDL (`pbip/Buyve
 - [fact_hausse_article](#fact_hausse_article) — Précalcul (scripts/precalcul_hausses.py) : hausse par article pour chaque campagne N+1, fenêtre et décalage. Rend les mesures instantanées.
 - [fact_impact_matiere](#fact_impact_matiere) — Précalcul : surcoût justifié par chaque matière pour chaque article à la prochaine campagne.
 - [fact_indice](#fact_indice) — Indices matières mensuels réels (INSEE BDM) et série d'hypothèse non matière à 2 %/an.
+- [fact_indice_fournisseur](#fact_indice_fournisseur) — Précalcul : indice mensuel par fournisseur (base 100 = tarif 2023) du prix fournisseur et du coût matière de son panier. L'écart montre le décalage de répercussion.
 - [fact_tarif](#fact_tarif) — Prix brut public par article et par campagne tarifaire (synthétique).
 - [param_campagne](#param_campagne) — Campagne N+1 analysée (comparée à la campagne N = N+1 − 1). Table déconnectée pour le segment.
 - [param_decalage](#param_decalage) — Décalage d'application : nombre de mois entre l'évolution du cours matière et sa répercussion dans le tarif.
@@ -44,6 +45,8 @@ Toutes de plusieurs vers un, filtrage dans un seul sens.
 | `fact_hausse_article.article_id` | `dim_article.article_id` |
 | `fact_impact_matiere.article_id` | `dim_article.article_id` |
 | `fact_impact_matiere.matiere_id` | `dim_matiere.matiere_id` |
+| `fact_indice_fournisseur.fournisseur_id` | `dim_fournisseur.fournisseur_id` |
+| `fact_indice_fournisseur.date` | `dim_date.date` |
 
 ## Sécurité par ligne
 
@@ -84,6 +87,12 @@ Toutes de plusieurs vers un, filtrage dans un seul sens.
 | Montant achats | `#,0 €` | Quantités × prix brut du tarif de l'année d'achat. |
 | Quantité achetée | `#,0` | Quantités achetées. |
 | Nb articles | `#,0` | Nombre d'articles. |
+| Quantité N-1 | `#,0` | Quantités de la même période un an plus tôt, coupée au dernier mois d'achat connu (comparaison à date). |
+| Montant N-1 | `#,0 €` | Montant des achats de la même période un an plus tôt, à date. |
+| Évol. volume % | `+0.0%;-0.0%;0.0%` | Quantités vs même période N-1. |
+| Évol. montant % | `+0.0%;-0.0%;0.0%` | Montant des achats vs même période N-1. |
+| Effet prix % | `+0.0%;-0.0%;0.0%` | Hausse de prix subie à volumes constants : Σ qté × (prix N − prix N-1) / Σ qté × prix N-1, sur les articles achetés les deux années. |
+| Surcoût prix € | `#,0 €` | Euros payés en plus par la seule hausse de prix, à volumes constants. |
 
 ### 4. Rattachement
 
@@ -112,6 +121,8 @@ Toutes de plusieurs vers un, filtrage dans un seul sens.
 | Statut fournisseur | `` | Statut lisible (icône + libellé) : À renégocier, À surveiller ou Conforme. |
 | Levier matière | `` | Matière du panier du fournisseur qui a le plus baissé sur la fenêtre : argument de négociation. |
 | Commentaire négociation | `` | Phrase de synthèse générée pour le fournisseur sélectionné (support de négociation). |
+| Couleur variation | `` | Vert marque si la matière baisse (levier acheteur), ambre signal si elle monte. |
+| Nb fournisseurs à renégocier | `0` | Fournisseurs dont l'écart dépasse 3 points. |
 
 ### 7. Alertes
 
@@ -142,6 +153,9 @@ Toutes de plusieurs vers un, filtrage dans un seul sens.
 | Délai baisses (mois) | `0.0` | Décalage moyen de répercussion sur les campagnes où les matières baissent (12 = baisse jamais vraiment répercutée). |
 | Asymétrie (mois) | `+0.0;-0.0;0.0` | Délai baisses − délai hausses : positif = le fournisseur répercute les hausses plus vite que les baisses. |
 | Écart au meilleur décalage | `+0.0;-0.0;0.0` | Écart (pts) restant une fois le décalage du fournisseur pris en compte : ce qui reste n'est pas expliqué par les matières. |
+| Indice prix fournisseur | `0.0` | Prix du tarif en vigueur, base 100 = tarif 2023 (panier fixe, en marches d'escalier aux campagnes). |
+| Indice coût matière | `0.0` | Coût matière du même panier, base 100 = référence du tarif 2023 (Σ part × indice INSEE). |
+| Écart prix / matière (pts) | `+0.0;-0.0;0.0` | Indice prix − indice coût matière : positif = le fournisseur facture plus que l'évolution de ses matières. |
 
 ### 9. Paramètres
 
@@ -211,6 +225,7 @@ Calendrier journalier 2022-2026. Les faits mensuels pointent sur le 1er du mois.
 | `trimestre` | string | oui | Trimestre (T1 à T4). |
 | `debut_mois` | boolean | non | Vrai le 1er du mois. |
 | `campagne` | int64 | oui | Campagne tarifaire en vigueur à cette date (tarif au 1er janvier). |
+| `mois_court` | string (calculée) | oui | Mois en clair sans l'année (axe des comparaisons année sur année). |
 
 ### dim_famille
 
@@ -262,6 +277,7 @@ Quantités achetées par article et par mois (synthétique, Pareto 80/20).
 | `quantite` | int64 | oui | Quantité achetée sur le mois. |
 | `prix_unitaire` | double (calculée) | non | Prix brut du tarif en vigueur l'année de l'achat. |
 | `montant` | double (calculée) | non | Quantité × prix brut de l'année. |
+| `prix_unitaire_n1` | double (calculée) | non | Prix brut du tarif de l'année précédant l'achat (effet prix). |
 
 ### fact_hausse_article
 
@@ -300,6 +316,17 @@ Indices matières mensuels réels (INSEE BDM) et série d'hypothèse non matièr
 | `matiere_id` | string | non | Matière. |
 | `date` | dateTime | non | Mois de l'indice (1er du mois). |
 | `valeur_eur` | double | oui | Valeur de l'indice (base 2010 en euros, ou €/t pour CU_T). |
+
+### fact_indice_fournisseur
+
+Précalcul : indice mensuel par fournisseur (base 100 = tarif 2023) du prix fournisseur et du coût matière de son panier. L'écart montre le décalage de répercussion.
+
+| Colonne | Type | Visible | Description |
+|---|---|---|---|
+| `fournisseur_id` | string | non | Fournisseur. |
+| `date` | dateTime | non | Mois (1er du mois). |
+| `indice_cout_matiere` | double | non | Coût matière du panier fixe du fournisseur, base 100 = référence du tarif 2023. |
+| `indice_prix` | double | non | Prix du tarif en vigueur sur le même panier, base 100 = tarif 2023. |
 
 ### fact_tarif
 
