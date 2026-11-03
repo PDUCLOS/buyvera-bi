@@ -7,7 +7,7 @@ model Model
 		legacyRedirects
 		returnErrorValuesAsNull
 
-annotation PBI_QueryOrder = ["DossierDonnees", "dim_date", "dim_fournisseur", "dim_famille", "dim_acheteur", "dim_matiere", "dim_article", "bridge_composition", "fact_tarif", "fact_achats", "fact_indice", "fact_hausse_article", "fact_impact_matiere"]
+annotation PBI_QueryOrder = ["DossierDonnees", "dim_date", "dim_fournisseur", "dim_famille", "dim_acheteur", "dim_matiere", "dim_article", "bridge_composition", "fact_tarif", "fact_achats", "fact_indice", "fact_hausse_article", "fact_impact_matiere", "fact_indice_fournisseur"]
 
 annotation __PBI_TimeIntelligenceEnabled = 0
 
@@ -25,6 +25,7 @@ ref table fact_achats
 ref table fact_indice
 ref table fact_hausse_article
 ref table fact_impact_matiere
+ref table fact_indice_fournisseur
 ref table param_campagne
 ref table param_hausse
 ref table param_decalage

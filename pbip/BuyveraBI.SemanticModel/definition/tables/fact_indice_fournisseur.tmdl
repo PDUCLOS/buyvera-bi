@@ -1,0 +1,59 @@
+/// Précalcul : indice mensuel par fournisseur (base 100 = tarif 2023) du prix fournisseur et du coût matière de son panier. L'écart montre le décalage de répercussion.
+table fact_indice_fournisseur
+	lineageTag: 83d24598-c467-5b55-a24c-3b55278787d1
+
+	/// Fournisseur.
+	column fournisseur_id
+		dataType: string
+		isHidden
+		lineageTag: 5c2e1ffe-f18a-58a2-8104-84bdbc31efa3
+		summarizeBy: none
+		sourceColumn: fournisseur_id
+
+		annotation SummarizationSetBy = User
+
+	/// Mois (1er du mois).
+	column date
+		dataType: dateTime
+		formatString: Short Date
+		isHidden
+		lineageTag: 53d97b86-bb8c-586a-afe7-3453b9dda7be
+		summarizeBy: none
+		sourceColumn: date
+
+		annotation UnderlyingDateTimeDataType = Date
+
+		annotation SummarizationSetBy = User
+
+	/// Coût matière du panier fixe du fournisseur, base 100 = référence du tarif 2023.
+	column indice_cout_matiere
+		dataType: double
+		isHidden
+		lineageTag: 04725d40-52f3-589f-bfaa-761a8bb62e08
+		summarizeBy: none
+		sourceColumn: indice_cout_matiere
+
+		annotation SummarizationSetBy = User
+
+	/// Prix du tarif en vigueur sur le même panier, base 100 = tarif 2023.
+	column indice_prix
+		dataType: double
+		isHidden
+		lineageTag: 9a595cf2-a73c-5d4a-8b80-ad720e0d9088
+		summarizeBy: none
+		sourceColumn: indice_prix
+
+		annotation SummarizationSetBy = User
+
+	partition fact_indice_fournisseur = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document ( File.Contents ( DossierDonnees & "fact_indice_fournisseur.csv" ), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv] ),
+				    Entetes = Table.PromoteHeaders ( Source, [PromoteAllScalars = true] ),
+				    Vides = Table.ReplaceValue ( Entetes, "", null, Replacer.ReplaceValue, {"indice_prix"} ),
+				    Types = Table.TransformColumnTypes ( Vides, {{"fournisseur_id", type text}, {"date", type date}, {"indice_cout_matiere", type number}, {"indice_prix", type number}}, "en-US" )
+				in
+				    Types
+
+	annotation PBI_ResultType = Table

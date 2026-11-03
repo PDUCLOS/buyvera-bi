@@ -305,7 +305,7 @@ table _Mesures
 	measure 'Couleur écart' = ```
 			VAR _e = [Écart pts]
 			RETURN
-			    SWITCH ( TRUE (), ISBLANK ( _e ), "#898781", _e > 3, "#d03b3b", _e > 1, "#ec835a", "#0ca30c" )
+			    SWITCH ( TRUE (), ISBLANK ( _e ), "#56655F", _e > 3, "#C9781C", _e > 1, "#D9A441", "#0F5C4A" )
 			```
 		displayFolder: 6. Négociation
 		lineageTag: 1472148e-db71-5f5d-b684-586dd02c3742
@@ -406,7 +406,7 @@ table _Mesures
 	measure 'Couleur alerte' = ```
 			VAR _v = [Variation 3 mois %]
 			RETURN
-			    SWITCH ( TRUE (), ISBLANK ( _v ), "#898781", _v > 0.05, "#d03b3b", _v < -0.05, "#0ca30c", "#898781" )
+			    SWITCH ( TRUE (), ISBLANK ( _v ), "#56655F", _v > 0.05, "#C9781C", _v < -0.05, "#0F5C4A", "#56655F" )
 			```
 		displayFolder: 7. Alertes
 		lineageTag: 94b0a706-6259-5c22-94d4-1175caabfd98
@@ -492,7 +492,7 @@ table _Mesures
 	measure 'Couleur action' = ```
 			VAR _p = [Plafond justifié prochaine campagne %]
 			RETURN
-			    SWITCH ( TRUE (), ISBLANK ( _p ), "#898781", _p < 0, "#0ca30c", _p > 0.02, "#d03b3b", "#898781" )
+			    SWITCH ( TRUE (), ISBLANK ( _p ), "#56655F", _p < 0, "#0F5C4A", _p > 0.02, "#C9781C", "#56655F" )
 			```
 		displayFolder: 7. Alertes
 		lineageTag: 0d4af545-fdcd-54c9-aa59-fe646b8f2dd9
@@ -575,6 +575,90 @@ table _Mesures
 		displayFolder: 2. Matières
 		lineageTag: bcb2db07-0c53-5d4e-8c8f-e06673eeba45
 
+	/// Prix du tarif en vigueur, base 100 = tarif 2023 (panier fixe, en marches d'escalier aux campagnes).
+	measure 'Indice prix fournisseur' = AVERAGE ( fact_indice_fournisseur[indice_prix] )
+		formatString: 0.0
+		displayFolder: 8. Décalage
+		lineageTag: aa22c9db-4cd4-5b37-ab6f-93a5f339e5bd
+
+	/// Coût matière du même panier, base 100 = référence du tarif 2023 (Σ part × indice INSEE).
+	measure 'Indice coût matière' = AVERAGE ( fact_indice_fournisseur[indice_cout_matiere] )
+		formatString: 0.0
+		displayFolder: 8. Décalage
+		lineageTag: d0553fb1-6724-510f-8870-595dadb9c9af
+
+	/// Indice prix − indice coût matière : positif = le fournisseur facture plus que l'évolution de ses matières.
+	measure 'Écart prix / matière (pts)' = ```
+			VAR _p = [Indice prix fournisseur]
+			VAR _c = [Indice coût matière]
+			RETURN
+			    IF ( NOT ISBLANK ( _p ) && NOT ISBLANK ( _c ), _p - _c )
+			```
+		formatString: +0.0;-0.0;0.0
+		displayFolder: 8. Décalage
+		lineageTag: ce0224a8-4b4f-568b-b402-69a8443041d8
+
+	/// Quantités de la même période un an plus tôt, coupée au dernier mois d'achat connu (comparaison à date).
+	measure 'Quantité N-1' = ```
+			VAR _fin = EOMONTH ( CALCULATE ( MAX ( fact_achats[date] ), REMOVEFILTERS () ), 0 )
+			RETURN
+			    CALCULATE ( [Quantité achetée], SAMEPERIODLASTYEAR ( dim_date[date] ), dim_date[date] <= EDATE ( _fin, -12 ) )
+			```
+		formatString: #,0
+		displayFolder: 3. Achats
+		lineageTag: 4824d77f-9446-54d3-84ec-2eb6168f7625
+
+	/// Montant des achats de la même période un an plus tôt, à date.
+	measure 'Montant N-1' = ```
+			VAR _fin = EOMONTH ( CALCULATE ( MAX ( fact_achats[date] ), REMOVEFILTERS () ), 0 )
+			RETURN
+			    CALCULATE ( [Montant achats], SAMEPERIODLASTYEAR ( dim_date[date] ), dim_date[date] <= EDATE ( _fin, -12 ) )
+			```
+		formatString: #,0 €
+		displayFolder: 3. Achats
+		lineageTag: a1d0ca30-745b-5399-8579-fbc5dad4b5ab
+
+	/// Quantités vs même période N-1.
+	measure 'Évol. volume %' = DIVIDE ( [Quantité achetée] - [Quantité N-1], [Quantité N-1] )
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: 3. Achats
+		lineageTag: d6d02d48-bfe5-51ed-84d2-2a5c5848822b
+
+	/// Montant des achats vs même période N-1.
+	measure 'Évol. montant %' = DIVIDE ( [Montant achats] - [Montant N-1], [Montant N-1] )
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: 3. Achats
+		lineageTag: 0c2ddc3c-434a-5d42-b08b-228d344f2158
+
+	/// Hausse de prix subie à volumes constants : Σ qté × (prix N − prix N-1) / Σ qté × prix N-1, sur les articles achetés les deux années.
+	measure 'Effet prix %' = ```
+			VAR _t = FILTER ( fact_achats, NOT ISBLANK ( fact_achats[prix_unitaire] ) && NOT ISBLANK ( fact_achats[prix_unitaire_n1] ) )
+			RETURN
+			    DIVIDE (
+			        SUMX ( _t, fact_achats[quantite] * ( fact_achats[prix_unitaire] - fact_achats[prix_unitaire_n1] ) ),
+			        SUMX ( _t, fact_achats[quantite] * fact_achats[prix_unitaire_n1] )
+			    )
+			```
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: 3. Achats
+		lineageTag: 050998b6-d2c0-5d32-9f2a-6bad77ccc23c
+
+	/// Euros payés en plus par la seule hausse de prix, à volumes constants.
+	measure 'Surcoût prix €' = ```
+			VAR _t = FILTER ( fact_achats, NOT ISBLANK ( fact_achats[prix_unitaire] ) && NOT ISBLANK ( fact_achats[prix_unitaire_n1] ) )
+			RETURN
+			    SUMX ( _t, fact_achats[quantite] * ( fact_achats[prix_unitaire] - fact_achats[prix_unitaire_n1] ) )
+			```
+		formatString: #,0 €
+		displayFolder: 3. Achats
+		lineageTag: 7c46ec74-ec33-5a67-95c4-4daa428ae882
+
+	/// Fournisseurs dont l'écart dépasse 3 points.
+	measure 'Nb fournisseurs à renégocier' = COUNTROWS ( FILTER ( VALUES ( dim_fournisseur[nom] ), [Écart pts] > 3 ) )
+		formatString: 0
+		displayFolder: 6. Négociation
+		lineageTag: 748c7598-d040-5266-a694-d354a2441d08
+
 	/// Conseil d'approvisionnement avant la prochaine campagne : baisse matière → limiter les achats et attendre le nouveau tarif ; hausse > 3 % → anticiper les achats avant le 1er janvier.
 	measure 'Conseil appro' = ```
 			VAR _p = [Plafond justifié prochaine campagne %]
@@ -591,7 +675,7 @@ table _Mesures
 	measure 'Couleur conseil' = ```
 			VAR _p = [Plafond justifié prochaine campagne %]
 			RETURN
-			    SWITCH ( TRUE (), ISBLANK ( _p ), "#898781", _p < 0, "#0ca30c", _p > 0.03, "#d03b3b", "#898781" )
+			    SWITCH ( TRUE (), ISBLANK ( _p ), "#56655F", _p < 0, "#0F5C4A", _p > 0.03, "#C9781C", "#56655F" )
 			```
 		displayFolder: 7. Alertes
 		lineageTag: 5a6e3302-8043-51ec-bdb7-03864b704d79

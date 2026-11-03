@@ -91,6 +91,15 @@ table dim_date
 
 		annotation SummarizationSetBy = User
 
+	/// Mois en clair sans l'année (axe des comparaisons année sur année).
+	column mois_court = FORMAT ( dim_date[date], "mmm" )
+		dataType: string
+		lineageTag: 31fe4bf0-51b4-59e7-a30a-5469ea95730a
+		summarizeBy: none
+		sortByColumn: mois
+
+		annotation SummarizationSetBy = User
+
 	partition dim_date = m
 		mode: import
 		source =

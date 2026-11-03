@@ -53,3 +53,11 @@ relationship 4ef5e506-b3a1-55bf-8492-6a9a3b0561b7
 relationship 29b54a7e-454b-5cf4-9002-3c1f985c3801
 	fromColumn: fact_impact_matiere.matiere_id
 	toColumn: dim_matiere.matiere_id
+
+relationship f0887a0c-83e9-5757-9d0b-db1fbb76eb58
+	fromColumn: fact_indice_fournisseur.fournisseur_id
+	toColumn: dim_fournisseur.fournisseur_id
+
+relationship aa8da21c-78d8-5931-bc11-a479d061ff46
+	fromColumn: fact_indice_fournisseur.date
+	toColumn: dim_date.date

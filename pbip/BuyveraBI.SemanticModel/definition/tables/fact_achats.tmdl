@@ -55,6 +55,16 @@ table fact_achats
 
 		annotation SummarizationSetBy = User
 
+	/// Prix brut du tarif de l'année précédant l'achat (effet prix).
+	column prix_unitaire_n1 = LOOKUPVALUE ( fact_tarif[prix_brut], fact_tarif[article_id], fact_achats[article_id], fact_tarif[campagne], YEAR ( fact_achats[date] ) - 1 )
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		lineageTag: 96964c55-a95b-5a53-b2dd-a3ef3887f63d
+		summarizeBy: none
+
+		annotation SummarizationSetBy = User
+
 	partition fact_achats = m
 		mode: import
 		source =

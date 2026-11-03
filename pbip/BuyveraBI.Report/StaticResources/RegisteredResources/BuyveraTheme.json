@@ -1,41 +1,41 @@
 {
   "name": "Buyvera",
   "dataColors": [
-    "#2a78d6",
-    "#eb6834",
-    "#1baf7a",
-    "#eda100",
-    "#e87ba4",
-    "#008300",
-    "#6250d6",
-    "#e34948"
+    "#16876A",
+    "#C9781C",
+    "#3C7DC4",
+    "#B4508A",
+    "#6E9A2A",
+    "#7B5CC4",
+    "#D0563F",
+    "#2AA0B3"
   ],
   "background": "#FFFFFF",
-  "foreground": "#0b0b0b",
-  "tableAccent": "#2a78d6",
-  "good": "#0ca30c",
-  "neutral": "#fab219",
-  "bad": "#d03b3b",
+  "foreground": "#12211D",
+  "tableAccent": "#0F5C4A",
+  "good": "#0F5C4A",
+  "neutral": "#D9A441",
+  "bad": "#C9781C",
   "textClasses": {
     "title": {
       "fontFace": "Segoe UI Semibold",
       "fontSize": 11,
-      "color": "#0b0b0b"
+      "color": "#12211D"
     },
     "label": {
       "fontFace": "Segoe UI",
       "fontSize": 9,
-      "color": "#52514e"
+      "color": "#56655F"
     },
     "callout": {
       "fontFace": "Segoe UI Semibold",
       "fontSize": 26,
-      "color": "#0b0b0b"
+      "color": "#12211D"
     },
     "header": {
       "fontFace": "Segoe UI Semibold",
       "fontSize": 10,
-      "color": "#52514e"
+      "color": "#56655F"
     }
   },
   "visualStyles": {
@@ -57,7 +57,7 @@
             "show": true,
             "color": {
               "solid": {
-                "color": "#E5E7EB"
+                "color": "#DCD8CE"
               }
             },
             "radius": 12
@@ -68,7 +68,7 @@
             "show": true,
             "color": {
               "solid": {
-                "color": "#0F172A"
+                "color": "#12211D"
               }
             },
             "transparency": 92,
@@ -91,7 +91,7 @@
             "show": true,
             "fontColor": {
               "solid": {
-                "color": "#0b0b0b"
+                "color": "#12211D"
               }
             },
             "fontSize": 11,
@@ -102,7 +102,7 @@
           {
             "labelColor": {
               "solid": {
-                "color": "#52514e"
+                "color": "#56655F"
               }
             },
             "gridlineShow": false,
@@ -113,12 +113,12 @@
           {
             "labelColor": {
               "solid": {
-                "color": "#898781"
+                "color": "#56655F"
               }
             },
             "gridlineColor": {
               "solid": {
-                "color": "#e1e0d9"
+                "color": "#E6E2D8"
               }
             },
             "gridlineStyle": "solid",
@@ -129,7 +129,7 @@
           {
             "color": {
               "solid": {
-                "color": "#52514e"
+                "color": "#56655F"
               }
             },
             "fontSize": 9,
@@ -140,7 +140,7 @@
           {
             "labelColor": {
               "solid": {
-                "color": "#52514e"
+                "color": "#56655F"
               }
             },
             "position": "Top"
@@ -154,7 +154,7 @@
           {
             "color": {
               "solid": {
-                "color": "#F4F5F7"
+                "color": "#F6F4EE"
               }
             },
             "transparency": 0
@@ -164,7 +164,7 @@
           {
             "color": {
               "solid": {
-                "color": "#F4F5F7"
+                "color": "#F6F4EE"
               }
             },
             "transparency": 0
@@ -275,7 +275,7 @@
             "gridHorizontal": true,
             "gridHorizontalColor": {
               "solid": {
-                "color": "#E5E7EB"
+                "color": "#DCD8CE"
               }
             },
             "rowPadding": 3
@@ -290,7 +290,7 @@
             },
             "backColor": {
               "solid": {
-                "color": "#1E293B"
+                "color": "#1C2E29"
               }
             }
           }
@@ -299,7 +299,7 @@
           {
             "backColorSecondary": {
               "solid": {
-                "color": "#F8FAFC"
+                "color": "#FAF8F3"
               }
             }
           }
@@ -312,7 +312,7 @@
           {
             "fontColor": {
               "solid": {
-                "color": "#52514e"
+                "color": "#56655F"
               }
             },
             "textSize": 9
@@ -322,7 +322,7 @@
           {
             "fontColor": {
               "solid": {
-                "color": "#0b0b0b"
+                "color": "#12211D"
               }
             }
           }
@@ -335,7 +335,7 @@
           {
             "color": {
               "solid": {
-                "color": "#0b0b0b"
+                "color": "#12211D"
               }
             },
             "fontSize": 24

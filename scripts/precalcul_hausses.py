@@ -87,6 +87,43 @@ def main() -> None:
     print(f"fact_hausse_article : {len(fha)} lignes ({fha['comparable'].sum()} comparables), "
           f"fact_impact_matiere : {len(fim)} lignes, prochaine campagne {prochaine}")
 
+    indices_fournisseur(idx, compo, tarif, volume, campagnes)
+
+
+def indices_fournisseur(idx, compo, tarif, volume, campagnes) -> None:
+    """Indice mensuel par fournisseur, base 100 = campagne de départ : prix fournisseur (tarif en vigueur,
+    en marches d'escalier) vs coût matière (Σ part × indice / base). L'écart entre les deux courbes montre
+    le décalage : une hausse répercutée vite, une baisse répercutée tard ou jamais.
+    Panier fixe : articles présents à toutes les campagnes, pondérés par prix × volume de la 1re année."""
+    art = pd.read_csv(P / "dim_article.csv")[["article_id", "fournisseur_id"]].set_index("article_id")
+    c0 = campagnes[0]
+    stables = tarif[campagnes].dropna().index
+    vol0 = volume.get(c0, pd.Series(dtype=float)).reindex(stables).fillna(0)
+    poids = (tarif.loc[stables, c0] * vol0)
+    poids = poids[poids > 0]
+    fin0 = pd.Timestamp(f"{c0}-01-01")
+    base = idx[(idx.index >= fin0 - pd.DateOffset(months=6)) & (idx.index < fin0)].mean()
+    rel = idx / base  # indice matière rapporté à la référence du tarif de départ
+    mois = idx.index[idx.index >= pd.Timestamp(f"{c0 - 1}-07-01")]
+    lignes = []
+    for f_id, arts in art.loc[poids.index].groupby("fournisseur_id").groups.items():
+        w = poids.loc[arts]
+        cp = compo[compo["article_id"].isin(arts)].pivot_table(index="article_id", columns="matiere_id",
+                                                                 values="part", aggfunc="sum").fillna(0)
+        cp = cp.reindex(w.index).fillna(0)
+        mix = (cp.mul(w, axis=0).sum() / w.sum())  # part moyenne pondérée de chaque matière
+        for t in mois:
+            cout = float((mix * rel.loc[t, mix.index]).sum() * 100)
+            annee = t.year
+            prix = None
+            if annee in tarif.columns:
+                prix = float((tarif.loc[w.index, annee] / tarif.loc[w.index, c0] * w).sum() / w.sum() * 100)
+            lignes.append({"fournisseur_id": f_id, "date": t.date(), "indice_cout_matiere": round(cout, 3),
+                           "indice_prix": None if prix is None else round(prix, 3)})
+    out = pd.DataFrame(lignes)
+    out.to_csv(P / "fact_indice_fournisseur.csv", index=False)
+    print(f"fact_indice_fournisseur : {len(out)} lignes, {out['fournisseur_id'].nunique()} fournisseurs")
+
 
 if __name__ == "__main__":
     main()
