@@ -434,7 +434,7 @@ RETURN
      "Signal sur 3 mois : ▲ hausse > 5 % (le fournisseur va s'en servir), ▼ baisse > 5 % (levier acheteur), ● stable.",
      """VAR _v = [Variation 3 mois %]
 RETURN
-    SWITCH ( TRUE (), ISBLANK ( _v ), BLANK (), _v > 0.05, "▲ Hausse : à anticiper", _v < -0.05, "▼ Baisse : convoquer le commercial", "● Stable" )"""),
+    SWITCH ( TRUE (), ISBLANK ( _v ), BLANK (), _v > 0.05, "▲ Hausse : à anticiper", _v < -0.05, "▼ Baisse : convoquer le fournisseur", "● Stable" )"""),
     ("Couleur alerte", "7. Alertes", "", "Couleur du signal matière (rouge = hausse, vert = baisse, gris = stable).",
      """VAR _v = [Variation 3 mois %]
 RETURN
@@ -511,11 +511,11 @@ RETURN
 RETURN
     CALCULATE ( SUM ( fact_achats[quantite] ), REMOVEFILTERS ( dim_date ), dim_date[annee] = _cBase - 1 )"""),
     ("Action fournisseur", "7. Alertes", "",
-     "Action recommandée selon le plafond justifié de la prochaine campagne : baisse → convoquer le commercial du fournisseur, hausse > 2 % → préparer la défense, sinon suivi.",
+     "Action recommandée selon le plafond justifié de la prochaine campagne : baisse → convoquer le fournisseur, hausse > 2 % → préparer la défense, sinon suivi.",
      """VAR _p = [Plafond justifié prochaine campagne %]
 RETURN
     SWITCH ( TRUE (), ISBLANK ( _p ), BLANK (),
-        _p < 0, "▼ Convoquer le commercial",
+        _p < 0, "▼ Convoquer le fournisseur",
         _p > 0.02, "▲ Préparer la défense",
         "● Suivi" )"""),
     ("Couleur action", "7. Alertes", "", "Vert = baisse à obtenir, rouge = hausse à cadrer, gris = suivi.",

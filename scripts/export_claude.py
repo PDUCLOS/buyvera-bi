@@ -96,7 +96,7 @@ def main() -> None:
         acq = (s[(s.index >= fin_next - pd.DateOffset(months=6)) & (s.index < fin_next)].mean()
                / s[(s.index >= pd.Timestamp(f"{prochaine - 1}-01-01") - pd.DateOffset(months=6))
                    & (s.index < pd.Timestamp(f"{prochaine - 1}-01-01"))].mean() - 1)
-        sig = "Hausse : à anticiper" if v3 > 0.05 else ("Baisse : convoquer le commercial" if v3 < -0.05 else "Stable")
+        sig = "Hausse : à anticiper" if v3 > 0.05 else ("Baisse : convoquer le fournisseur" if v3 < -0.05 else "Stable")
         rows.append({"matiere": dmat[m], "variation_campagne": var[m], "variation_3m": v3, "variation_12m": v12,
                      "acquis_prochaine": acq, "signal": sig, "dernier_mois": last.strftime("%Y-%m")})
     pd.DataFrame(rows).round(6).to_csv(OUT / "matieres.csv", index=False)

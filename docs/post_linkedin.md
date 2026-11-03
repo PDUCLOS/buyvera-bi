@@ -9,11 +9,11 @@ J'ai construit un rapport Power BI qui confronte la hausse demandée à l'évolu
 Sur une campagne simulée de 16 M€ d'achats :
 → les fournisseurs demandent +1,2 % quand les matières justifient −0,6 %
 → 335 k€ sont renégociables, dont 120 k€ chez un seul fournisseur
-→ et pour 2027, les cours actuels justifient déjà +11 % : l'acheteur le sait avant le commercial
+→ et pour 2027, les cours actuels justifient déjà +11 % : l'acheteur le sait avant le fournisseur
 
 Ce que j'ai mis dedans :
 • un modèle en étoile avec table pont article × matière, généré en TMDL et versionné sous Git
-• des alertes matières avec plan d'action : convoquer le commercial quand ça baisse, anticiper les achats quand ça monte
+• des alertes matières avec plan d'action : convoquer le fournisseur quand ça baisse, anticiper les achats quand ça monte
 • une fiche de négociation avec argument rédigé et simulateur de contre-proposition
 • la mesure du décalage : les hausses sont-elles répercutées plus vite que les baisses ?
 • la sécurité par acheteur (RLS), testée

@@ -397,7 +397,7 @@ table _Mesures
 	measure 'Alerte matière' = ```
 			VAR _v = [Variation 3 mois %]
 			RETURN
-			    SWITCH ( TRUE (), ISBLANK ( _v ), BLANK (), _v > 0.05, "▲ Hausse : à anticiper", _v < -0.05, "▼ Baisse : convoquer le commercial", "● Stable" )
+			    SWITCH ( TRUE (), ISBLANK ( _v ), BLANK (), _v > 0.05, "▲ Hausse : à anticiper", _v < -0.05, "▼ Baisse : convoquer le fournisseur", "● Stable" )
 			```
 		displayFolder: 7. Alertes
 		lineageTag: f66f27ac-300f-5ae5-87e4-443967d9b651
@@ -476,12 +476,12 @@ table _Mesures
 		displayFolder: 7. Alertes
 		lineageTag: 564885b6-6f55-59dd-9e3e-028c55b1b998
 
-	/// Action recommandée selon le plafond justifié de la prochaine campagne : baisse → convoquer le commercial du fournisseur, hausse > 2 % → préparer la défense, sinon suivi.
+	/// Action recommandée selon le plafond justifié de la prochaine campagne : baisse → convoquer le fournisseur, hausse > 2 % → préparer la défense, sinon suivi.
 	measure 'Action fournisseur' = ```
 			VAR _p = [Plafond justifié prochaine campagne %]
 			RETURN
 			    SWITCH ( TRUE (), ISBLANK ( _p ), BLANK (),
-			        _p < 0, "▼ Convoquer le commercial",
+			        _p < 0, "▼ Convoquer le fournisseur",
 			        _p > 0.02, "▲ Préparer la défense",
 			        "● Suivi" )
 			```

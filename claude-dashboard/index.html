@@ -68,7 +68,7 @@
 
     <article class="bv-card" id="matieres">
       <h2>Ce qui bouge sur les matières</h2>
-      <p>Variation sur la fenêtre de la campagne 2026, signal sur les 3 derniers mois et variation déjà acquise pour 2027. Une baisse est un levier : convoquer le commercial avant la campagne.</p>
+      <p>Variation sur la fenêtre de la campagne 2026, signal sur les 3 derniers mois et variation déjà acquise pour 2027. Une baisse est un levier : convoquer le fournisseur avant la campagne.</p>
       <div class="bv-wrap">
         <table data-source="matieres" data-row-key="matiere">
           <thead><tr><th data-field="matiere">Matière</th><th data-field="signal">Signal 3 mois</th><th class="num" data-field="variation_campagne">Campagne 2026</th><th class="num" data-field="variation_12m">12 mois</th><th class="num" data-field="acquis_prochaine">Acquis 2027</th></tr></thead>
@@ -257,7 +257,7 @@
     });
   });
 
-  const signal = { 'Hausse : à anticiper': 'bad', 'Baisse : convoquer le commercial': 'ok', 'Stable': 'warn' };
+  const signal = { 'Hausse : à anticiper': 'bad', 'Baisse : convoquer le fournisseur': 'ok', 'Stable': 'warn' };
   dash.draw('mat', (tb) => {
     const d = dash.data('matieres');
     tb.replaceChildren();

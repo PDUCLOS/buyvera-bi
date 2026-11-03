@@ -1,8 +1,8 @@
 matiere,variation_campagne,variation_3m,variation_12m,acquis_prochaine,signal,dernier_mois
-Aluminium,0.019657,-0.051828,0.258508,0.258558,Baisse : convoquer le commercial,2026-09
+Aluminium,0.019657,-0.051828,0.258508,0.258558,Baisse : convoquer le fournisseur,2026-09
 Cuivre,0.055741,0.067437,0.483266,0.324287,Hausse : à anticiper,2026-09
 Acier / métaux ferreux,-0.056954,-0.030717,-0.009302,0.02708,Stable,2026-09
-Nickel (inox),-0.139385,-0.076262,0.099744,0.169662,Baisse : convoquer le commercial,2026-09
+Nickel (inox),-0.139385,-0.076262,0.099744,0.169662,Baisse : convoquer le fournisseur,2026-09
 "Non matière (main-d'œuvre, énergie, frais)",0.02,0.004963,0.02,0.014962,Stable,2026-09
 Plastiques (naphta),-0.219435,0.161512,0.508929,0.496055,Hausse : à anticiper,2026-09
 Zinc,-0.046123,0.136123,0.398305,0.227302,Hausse : à anticiper,2026-09

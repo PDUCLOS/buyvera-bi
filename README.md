@@ -25,7 +25,7 @@ distribution industrielle (transmission mécanique et CVC).
 | **Détail article** | De quoi est fait cet article, comment ont évolué ses matières et son prix sur 4 campagnes ? |
 | **Matières** | Quels indices bougent ? Fenêtre de référence (3, 6, 12 mois) et **décalage d'application** paramétrables, délai de répercussion des hausses vs des baisses. |
 | **Rattachement** | Quelle part des références tarif se rattache seule à l'ERP (objectif 80 %) ? Liste des propositions à valider. |
-| **Alertes matières** | Ce qui monte ou baisse avant que le commercial ne le dise : signal 3 mois, plafond justifié pour la campagne suivante, articles exposés et plan d'action (convoquer le commercial, préparer la défense, limiter ou anticiper les achats). |
+| **Alertes matières** | Ce qui monte ou baisse avant que le fournisseur ne le dise : signal 3 mois, plafond justifié pour la campagne suivante, articles exposés et plan d'action (convoquer le fournisseur, préparer la défense, limiter ou anticiper les achats). |
 | **Prix & volumes** | Année sur année, à date : montant, volumes, **effet prix à volumes constants**, surcoût par fournisseur, une courbe de volumes par année. |
 | **Fiche négociation** | Tout pour le rendez-vous : statut, argument rédigé, **courbe de décalage prix vs coût matière**, levier matière coloré, **simulateur de contre-proposition**. Accessible par clic droit → Extraire depuis n'importe quel fournisseur. |
 
@@ -106,7 +106,7 @@ tests/dax/                                  requêtes de validation sur le moteu
 
 Les tarifs et les volumes sont synthétiques ; les indices matières sont réels et la mécanique de campagne tarifaire,
 d'effet cliquet et de rattachement de références vient du terrain. Le point le plus utile pour un acheteur n'est pas
-le chiffre de la campagne passée : c'est de savoir, avant le commercial, ce que les matières justifient déjà pour la
+le chiffre de la campagne passée : c'est de savoir, avant le fournisseur, ce que les matières justifient déjà pour la
 suivante.
 
 ---

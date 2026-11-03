@@ -159,7 +159,7 @@ def s_probleme(img, t, d):
     texte(img, (200, 220), "Aujourd'hui, l'acheteur négocie à l'aveugle", F_TITRE(64), BLANC, apparition(t, 0.1))
     items = [("✕", "Aucun lien entre la hausse demandée et les cours réels"),
              ("✕", "Les baisses matières ne sont jamais répercutées"),
-             ("✕", "Le commercial connaît les cours avant vous")]
+             ("✕", "Le fournisseur connaît les cours avant vous")]
     for i, (ic, s) in enumerate(items):
         a = apparition(t, 1.0 + i * 1.3)
         texte(img, (220, 400 + i * 130), ic, F_SYMB(56), ROUGE, a)
@@ -207,8 +207,8 @@ def s_fournisseurs(img, t, d):
 def s_alertes(img, t, d):
     capture(img, "06_alertes_matieres.png", t, d, 760, 170, 1080, focus=(0.3, 0.25), zoom=0.1)
     texte(img, (90, 170), "Sachez avant", F_TITRE(60), BLANC, apparition(t, 0.2))
-    texte(img, (90, 245), "le commercial", F_TITRE(60), AMBRE, apparition(t, 0.4))
-    pastille(img, (90, 400), "▼ Baisse : convoquer le commercial", VERT, apparition(t, 1.4), 30)
+    texte(img, (90, 245), "le fournisseur", F_TITRE(60), AMBRE, apparition(t, 0.4))
+    pastille(img, (90, 400), "▼ Baisse : convoquer le fournisseur", VERT, apparition(t, 1.4), 30)
     pastille(img, (90, 500), "▲ Hausse : anticiper les achats", ROUGE, apparition(t, 2.4), 30)
     compteur(img, (90, 650), 11.2, pct, t, 3.6, "déjà justifiés pour 2027", AMBRE)
 
@@ -267,12 +267,12 @@ SCENES = [
     ("Chaque année, la même lettre. Nos tarifs augmentent, à cause des matières premières.", 4.5, s_lettre),
     ("Mais cette hausse est-elle vraiment justifiée ?", 3.0, s_question),
     ("Sans outil, l'acheteur négocie à l'aveugle. Les baisses ne sont jamais répercutées. "
-     "Et le commercial connaît les cours avant lui.", 5.5, s_probleme),
+     "Et le fournisseur connaît les cours avant lui.", 5.5, s_probleme),
     ("Buyvera BI confronte chaque tarif fournisseur aux cours réels des matières premières.", 4.0, s_logo),
     ("Sur la campagne 2026, les fournisseurs demandent plus un virgule deux pour cent, quand les matières "
      "justifient moins zéro virgule six. Trois cent trente cinq mille euros sont à renégocier.", 6.0, s_synthese),
     ("En un coup d'œil, vous voyez qui demande plus que ses matières ne le justifient.", 4.5, s_fournisseurs),
-    ("Les alertes matières vous préviennent avant le commercial. Une baisse ? On le convoque. "
+    ("Les alertes matières vous préviennent avant le fournisseur. Une baisse ? On le convoque. "
      "Une hausse ? On anticipe les achats. Pour 2027, les cours justifient déjà plus onze pour cent.", 6.5, s_alertes),
     ("Pour le rendez-vous, la fiche négociation rédige l'argument et chiffre la contre-proposition.", 5.0, s_fiche),
     ("Un parcours guidé, de l'alerte au rendez-vous. Chaque acheteur ne voit que son périmètre.", 4.0, s_rls),
