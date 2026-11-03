@@ -1,6 +1,9 @@
 <meta name="dash-one-writer">
 <style>
   #dash-root { --dash-gutter: var(--cds-pad-lg); }
+  /* Charte Buyvera : vert marque, menthe, ambre signal (valeurs sombres pour le thème sombre) */
+  .bv { --bv-brand: #0F5C4A; --bv-mint: #7FD1B3; --bv-signal: #C9781C; --bv-warn: #D9A441; --bv-on-brand: #FFFFFF; }
+  @media (prefers-color-scheme: dark) { .bv { --bv-brand: #5FC4A0; --bv-signal: #E59A45; --bv-on-brand: #0E1714; } }
   .bv { font-family: var(--font-anthropic-sans); display: grid; gap: var(--cds-gap-xl); max-width: 1180px; margin-inline: auto; }
   .bv-head h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; text-wrap: balance; }
   .bv-head p { margin: var(--cds-gap-sm) 0 0; color: var(--color-fg-muted); max-width: 70ch; line-height: 1.5; }
@@ -11,7 +14,10 @@
   .bv-kpi span { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
   .bv-kpi strong { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); font-variant-numeric: tabular-nums; min-height: 1.2em; }
   .bv-kpi small { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
-  .bv-kpi.is-key strong { color: var(--color-bad); }
+  .bv-kpi.is-key { background: var(--bv-brand); border-color: var(--bv-brand); }
+  .bv-kpi.is-key strong, .bv-kpi.is-key span, .bv-kpi.is-key small { color: var(--bv-on-brand); }
+  .bv-head h1 { color: var(--color-fg); }
+  .bv-head h1::before { content: "Buyvera BI · achats"; display: block; font-family: var(--font-anthropic-sans); font-size: var(--cds-font-size-caption); font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--bv-brand); margin-bottom: var(--cds-gap-xs); }
   .bv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); gap: var(--cds-gap-md); }
   .bv-card { padding: var(--cds-pad-lg); display: grid; gap: var(--cds-gap-sm); align-content: start; min-width: 0; }
   .bv-card h2 { margin: 0; font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); }
@@ -28,7 +34,7 @@
   .bv td.num, .bv th.num { text-align: right; white-space: nowrap; }
   .bv td.txt { min-width: 16rem; color: var(--color-fg-muted); line-height: 1.45; }
   .bv-pill { display: inline-block; padding: .1rem .5rem; border-radius: 999px; font-weight: 600; white-space: nowrap; border: 1px solid currentColor; }
-  .bv-bad { color: var(--color-bad); } .bv-warn { color: var(--color-warn); } .bv-ok { color: var(--color-ok); }
+  .bv-bad { color: var(--bv-signal); } .bv-warn { color: var(--bv-warn); } .bv-ok { color: var(--bv-brand); }
   .bv-check { font-weight: 600; }
   [data-dash-source-state=empty] { color: transparent; }
   [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
@@ -176,11 +182,11 @@
 
 <script>
   const F = window.bvFmt;
-  const cssVar = (n) => getComputedStyle(document.getElementById('dash-root')).getPropertyValue(n).trim();
-  const couleur = (s) => cssVar({ bad: '--color-bad', warn: '--color-warn', ok: '--color-ok' }[window.bvStatut[s]] || '--cds-chart-muted');
-  document.querySelectorAll('.bv-dot-bad').forEach((e) => { e.style.background = cssVar('--color-bad'); });
-  document.querySelectorAll('.bv-dot-warn').forEach((e) => { e.style.background = cssVar('--color-warn'); });
-  document.querySelectorAll('.bv-dot-ok').forEach((e) => { e.style.background = cssVar('--color-ok'); });
+  const cssVar = (n) => getComputedStyle(document.querySelector('.bv') || document.getElementById('dash-root')).getPropertyValue(n).trim();
+  const couleur = (s) => cssVar({ bad: '--bv-signal', warn: '--bv-warn', ok: '--bv-brand' }[window.bvStatut[s]] || '--cds-chart-muted');
+  document.querySelectorAll('.bv-dot-bad').forEach((e) => { e.style.background = cssVar('--bv-signal'); });
+  document.querySelectorAll('.bv-dot-warn').forEach((e) => { e.style.background = cssVar('--bv-warn'); });
+  document.querySelectorAll('.bv-dot-ok').forEach((e) => { e.style.background = cssVar('--bv-brand'); });
   let animer = true;
 
   dash.draw('scatter', (el) => {
@@ -202,10 +208,10 @@
     svg.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5).tickSize(-(W - m.l - m.r)).tickFormat(tick))
       .attr('font-size', null).attr('font-family', null).call((g) => { g.select('.domain').remove(); g.selectAll('line').attr('stroke', 'var(--cds-chart-grid)'); g.selectAll('text').attr('fill', 'var(--color-fg-muted)'); });
     const tol = 0.01;
-    svg.append('path').attr('fill', 'var(--cds-chart-muted)').attr('opacity', 0.15)
+    svg.append('path').attr('fill', 'var(--bv-mint)').attr('opacity', 0.28)
       .attr('d', `M${x(dom[0])},${y(dom[0] + tol)}L${x(dom[1] - tol)},${y(dom[1])}L${x(dom[1])},${y(dom[1])}L${x(dom[1])},${y(dom[1] - tol)}L${x(dom[0] + tol)},${y(dom[0])}L${x(dom[0])},${y(dom[0])}Z`);
     svg.append('line').attr('x1', x(dom[0])).attr('y1', y(dom[0])).attr('x2', x(dom[1])).attr('y2', y(dom[1]))
-      .attr('stroke', 'var(--cds-chart-reference)').attr('stroke-dasharray', '4 4');
+      .attr('stroke', 'var(--bv-brand)').attr('stroke-width', 1.5).attr('stroke-dasharray', '6 5');
     svg.append('text').attr('x', W - m.r).attr('y', H - 6).attr('text-anchor', 'end').attr('fill', 'var(--color-fg-muted)')
       .attr('font-size', 'var(--cds-font-size-caption)').text('Hausse justifiée par les matières →');
     svg.append('text').attr('x', m.l).attr('y', m.t + 4).attr('dx', 6).attr('fill', 'var(--color-fg-muted)')

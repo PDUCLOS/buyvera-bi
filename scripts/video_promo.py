@@ -22,9 +22,11 @@ SORTIE = RACINE / "docs" / "video" / "buyvera_promo.mp4"
 W, H, FPS = 1920, 1080, 30
 FONTS = Path("C:/Windows/Fonts")
 
+# Charte Buyvera (thème sombre) : encre, vert marque, menthe, ambre signal
 NAVY, NAVY2, BLEU, AMBRE, ROUGE, VERT, BLANC, GRIS = (
-    (15, 23, 42), (30, 41, 59), (42, 120, 214), (237, 161, 0), (208, 59, 59), (12, 163, 12), (248, 250, 252), (148, 163, 184))
-CROP = (30, 226, 1222, 906)  # zone du canevas du rapport dans les captures 1728×1080
+    (14, 23, 20), (22, 33, 29), (15, 92, 74), (229, 154, 69), (229, 154, 69), (95, 196, 160), (238, 242, 239), (157, 176, 168))
+MENTHE = (127, 209, 179)
+CROP = (37, 204, 1222, 922)  # zone du canevas du rapport (bandeau compris) dans les captures 1728×1080
 
 
 def police(nom: str, taille: int) -> ImageFont.FreeTypeFont:
@@ -168,10 +170,16 @@ def s_logo(img, t, d):
     a = apparition(t, 0.1, 0.8)
     r = int(70 + 10 * math.sin(t * 2))
     calque = Image.new("RGBA", img.size, (0, 0, 0, 0))
-    ImageDraw.Draw(calque).ellipse([W // 2 - 420 - r, 330 - r, W // 2 - 420 + r, 330 + r], fill=BLEU + (int(200 * a),))
+    d = ImageDraw.Draw(calque)
+    for k in range(3):
+        hb = 120 + 12 * math.sin(t * 3 + k)
+        d.rounded_rectangle([W // 2 - 470 + k * 44, 390 - hb, W // 2 - 440 + k * 44, 390], radius=8,
+                            fill=MENTHE + (int(255 * a),))
     img.alpha_composite(calque)
-    texte(img, (W // 2 - 420, 330), "B", F_TITRE(110), BLANC, a, "mm")
-    texte(img, (W // 2 - 300, 330), "Buyvera BI", F_TITRE(120), BLANC, a, "lm")
+    f = F_TITRE(130)
+    texte(img, (W // 2 - 310, 330), "buy", f, BLANC, a, "lm")
+    texte(img, (W // 2 - 310 + int(f.getlength("buy")), 330), "vera", f, MENTHE, a, "lm")
+    texte(img, (W // 2 - 310 + int(f.getlength("buyvera ")), 330), "BI", f, BLANC, a, "lm")
     texte(img, (W // 2, 560), "Chaque tarif fournisseur confronté", F_LEGER(58), BLANC, apparition(t, 0.8), "mm")
     texte(img, (W // 2, 640), "aux cours réels des matières premières", F_LEGER(58), AMBRE, apparition(t, 1.1), "mm")
     texte(img, (W // 2, 780), "Cuivre · Aluminium · Nickel · Acier · Zinc · Plastiques — indices INSEE",
@@ -217,18 +225,18 @@ def s_fiche(img, t, d):
 
 
 def s_rls(img, t, d):
-    capture(img, "08_rls_acheteur_cvc.png", t, d, 760, 210, 1080, focus=(0.5, 0.5), zoom=0.05)
-    texte(img, (90, 300), "Chaque acheteur,", F_TITRE(60), BLANC, apparition(t, 0.2))
-    texte(img, (90, 380), "son périmètre", F_TITRE(60), AMBRE, apparition(t, 0.4))
-    texte(img, (90, 520), "Sécurité par acheteur.", F_TEXTE(38), GRIS, apparition(t, 1.2))
-    texte(img, (90, 580), "La direction voit tout.", F_TEXTE(38), GRIS, apparition(t, 1.5))
+    capture(img, "00_parcours.png", t, d, 760, 190, 1080, focus=(0.3, 0.5), zoom=0.06)
+    texte(img, (90, 260), "Un parcours guidé,", F_TITRE(58), BLANC, apparition(t, 0.2))
+    texte(img, (90, 335), "de l'alerte au rendez-vous", F_TITRE(46), AMBRE, apparition(t, 0.4))
+    texte(img, (90, 480), "Chaque acheteur ne voit", F_TEXTE(38), GRIS, apparition(t, 1.2))
+    texte(img, (90, 535), "que son périmètre.", F_TEXTE(38), GRIS, apparition(t, 1.4))
 
 
 def s_benefices(img, t, d):
     texte(img, (W // 2, 200), "Ce que gagnent les achats", F_TITRE(66), BLANC, apparition(t, 0.1), "mm")
     cartes = [("Négocier", "les baisses aussi vite", "que les hausses", VERT),
               ("Anticiper", "la campagne suivante", "avant le tarif", AMBRE),
-              ("Aligner", "achats, appros", "et commerciaux", BLEU)]
+              ("Aligner", "achats, appros", "et commerciaux", MENTHE)]
     for i, (a1, a2, a3, c) in enumerate(cartes):
         a = apparition(t, 0.8 + i * 0.9)
         x = 180 + i * 540
@@ -243,7 +251,11 @@ def s_benefices(img, t, d):
 
 def s_fin(img, t, d):
     a = apparition(t, 0.1, 0.8)
-    texte(img, (W // 2, 360), "Buyvera BI", F_TITRE(140), BLANC, a, "mm")
+    f = F_TITRE(140)
+    x0 = W // 2 - int(f.getlength("buyvera BI")) // 2
+    texte(img, (x0, 360), "buy", f, BLANC, a, "lm")
+    texte(img, (x0 + int(f.getlength("buy")), 360), "vera", f, MENTHE, a, "lm")
+    texte(img, (x0 + int(f.getlength("buyvera ")), 360), "BI", f, BLANC, a, "lm")
     texte(img, (W // 2, 520), "Ne subissez plus les hausses. Argumentez.", F_LEGER(64), AMBRE, apparition(t, 0.7), "mm")
     texte(img, (W // 2, 700), "Power BI · DAX · TMDL · indices INSEE", F_TEXTE(34), GRIS, apparition(t, 1.3), "mm")
     texte(img, (W // 2, 770), "github.com/PDUCLOS/buyvera-bi", F_TITRE(40), BLANC, apparition(t, 1.6), "mm")
@@ -263,7 +275,7 @@ SCENES = [
     ("Les alertes matières vous préviennent avant le commercial. Une baisse ? On le convoque. "
      "Une hausse ? On anticipe les achats. Pour 2027, les cours justifient déjà plus onze pour cent.", 6.5, s_alertes),
     ("Pour le rendez-vous, la fiche négociation rédige l'argument et chiffre la contre-proposition.", 5.0, s_fiche),
-    ("Chaque acheteur ne voit que son périmètre.", 3.0, s_rls),
+    ("Un parcours guidé, de l'alerte au rendez-vous. Chaque acheteur ne voit que son périmètre.", 4.0, s_rls),
     ("Négocier les baisses aussi vite que les hausses. Anticiper la campagne suivante. "
      "Aligner achats, approvisionnements et commerciaux.", 5.5, s_benefices),
     ("Buyvera BI. Ne subissez plus les hausses : argumentez.", 4.5, s_fin),
@@ -271,7 +283,7 @@ SCENES = [
 FONDU = 0.35  # fondu au noir entre scènes, en secondes
 VOIX = False  # True : voix off Windows (Hortense) calée sur chaque scène
 # Durée de lecture de chaque scène sans voix off (secondes)
-DUREES_LECTURE = [4.5, 3.0, 5.5, 4.5, 6.0, 5.0, 7.0, 5.5, 3.5, 5.5, 4.5]
+DUREES_LECTURE = [4.5, 3.0, 5.5, 4.5, 6.0, 5.0, 7.0, 5.5, 4.5, 5.5, 4.5]
 
 
 def voix(dossier: Path) -> list[Path]:
