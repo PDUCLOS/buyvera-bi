@@ -658,6 +658,16 @@ RETURN
      """VAR _v = [Variation matière article %]
 RETURN
     IF ( ISBLANK ( _v ), "#56655F", IF ( _v < 0, "#0F5C4A", "#C9781C" ) )"""),
+    ("Résumé signaux", "6. Négociation", "", "Nombre de matières en hausse et en baisse sur 3 mois.",
+     """VAR _h = COUNTROWS ( FILTER ( VALUES ( dim_matiere[libelle] ), [Variation 3 mois %] > 0.05 ) )
+VAR _b = COUNTROWS ( FILTER ( VALUES ( dim_matiere[libelle] ), [Variation 3 mois %] < -0.05 ) )
+RETURN
+    FORMAT ( _h + 0, "0" ) & " ▲   " & FORMAT ( _b + 0, "0" ) & " ▼"
+"""),
+    ("Résumé cible", "6. Négociation", "", "Nombre de fournisseurs à renégocier, en clair.",
+     "FORMAT ( [Nb fournisseurs à renégocier] + 0, \"0\" ) & \" fournisseurs\""),
+    ("Résumé 2027", "6. Négociation", "", "Hausse déjà justifiée pour la prochaine campagne, en clair.",
+     "[Prochaine campagne] & \" : \" & FORMAT ( [Plafond justifié prochaine campagne %], \"+0.0 %\" )"),
     ("Nb fournisseurs à renégocier", "6. Négociation", "0", "Fournisseurs dont l'écart dépasse 3 points.",
      "COUNTROWS ( FILTER ( VALUES ( dim_fournisseur[nom] ), [Écart pts] > 3 ) )"),
     ("Conseil appro", "7. Alertes", "",
@@ -687,6 +697,16 @@ CAMPAGNE = ("c", "param_campagne", "campagne")
 FOURN = ("c", "dim_fournisseur", "nom")
 
 
+# Charte Buyvera (design system « Buyvera ») ; séries validées au contrôle daltonisme du skill dataviz
+SERIES = ["#16876A", "#C9781C", "#3C7DC4", "#B4508A", "#6E9A2A", "#7B5CC4", "#D0563F", "#2AA0B3"]
+NAVY, NAVY_2, ACCENT, FOND, BORD = "#12211D", "#1C2E29", "#0F5C4A", "#ECEAE3", "#DCD8CE"
+PAPIER, TUILE_SIGNAL, TEXTE_SIGNAL = "#F6F4EE", "#F8E9D6", "#7A4610"
+HAUT = 56  # hauteur du bandeau de navigation
+TEXTE, TEXTE_2, MUET, GRILLE = "#12211D", "#56655F", "#56655F", "#E6E2D8"
+MENTHE, SIGNAL = "#7FD1B3", "#C9781C"
+TEAL, AMBRE, GRIS = ACCENT, "#eda100", MUET
+
+
 def m(nom: str) -> tuple:
     return ("m", nom)
 
@@ -697,8 +717,9 @@ def v(typ, x, y, w, h, roles=None, titre=None, ordre=None, objets=None, filtres=
 
 
 def entete(titre: str, sous_titre: str) -> list[dict]:
-    return [v("textbox", 20, 6, 880, 72, texte=(titre, sous_titre)),
-            v("card", 920, 14, 340, 48, {"Values": [m("Dernier indice chargé")]}, objets={"police": 11})]
+    return [v("textbox", 20, 8, 900, 70, texte=(titre, sous_titre), objets={"entete": True}),
+            v("card", 960, 18, 300, 40, {"Values": [m("Dernier indice chargé")]},
+              objets={"police": 10, "fond": TUILE_SIGNAL, "valeur": TEXTE_SIGNAL, "sans_bord": True})]
 
 
 def segment(champ, x, y, w=240, h=62, titre=None, unique=False):
@@ -723,28 +744,44 @@ def etape(num, titre, question, cible, x, y, w=236, h=250):
             v("nav", x + 16, y + h - 58, w - 32, 42, objets={"cible": cible, "texte": "Ouvrir  →", "actif": True})]
 
 
+def tuile(x, y, w, h, mesure, titre, cle=False, filtres=None, police=None):
+    o = {"fond": ACCENT, "valeur": "#FFFFFF", "titre_c": "#D6EFE5"} if cle else {}
+    if police:
+        o["police"] = police
+    return v("card", x, y, w, h, {"Values": [m(mesure)]}, titre=titre, objets=o, filtres=filtres or [])
+
+
 KPI_CAMPAGNE = [
-    v("card", 20 + i * 250, 150, 235, 100, {"Values": [m(n)]}, titre=n)
-    for i, n in enumerate(["Hausse demandée %", "Hausse justifiée %", "Écart pts", "€ renégociables", "Valeur N"])
+    tuile(20 + i * 250, 150, 235, 100, n, n, cle=(n == "€ renégociables"))
+    for i, n in enumerate(["€ renégociables", "Hausse demandée %", "Hausse justifiée %", "Écart pts", "Valeur N"])
 ]
 
 PAGES = [
     ("Parcours négociation", entete(
-        "Parcours de négociation",
-        "Cinq étapes, de l'alerte matière au rendez-vous fournisseur. Chaque carte ouvre la page qui répond à la question.") + [
-        segment(("c", "dim_famille", "univers"), 20, 80, titre="Univers"),
-        v("card", 280, 80, 320, 62, {"Values": [m("€ renégociables")]}, titre="€ renégociables 2026"),
-        v("card", 610, 80, 320, 62, {"Values": [m("Nb fournisseurs à renégocier")]}, titre="Fournisseurs à renégocier"),
-        v("card", 940, 80, 320, 62, {"Values": [m("Plafond justifié prochaine campagne %")]}, titre="Déjà justifié pour 2027"),
-        *etape(1, "Détecter", "Quelles matières montent ou baissent ? Une baisse : convoquer le commercial.", "Alertes matières", 20, 160),
-        *etape(2, "Chiffrer", "Combien renégocier sur la campagne, et sur quelles familles ?", "Synthèse campagne", 271, 160),
-        *etape(3, "Cibler", "Quels fournisseurs demandent plus que leurs matières ne le justifient ?", "Fournisseurs", 522, 160),
-        *etape(4, "Comprendre", "Prix et volumes année sur année, décalage hausses / baisses.", "Prix & volumes", 773, 160),
-        *etape(5, "Négocier", "Argument rédigé, levier matière et contre-proposition chiffrée.", "Fiche négociation", 1024, 160),
-        v("lineChart", 20, 425, 1240, 275,
+        "Préparer la négociation en 5 étapes",
+        "De l'alerte matière au rendez-vous fournisseur. Chaque étape donne son chiffre clé et ouvre la page qui répond.") + [
+        tuile(20, 92, 300, 84, "€ renégociables", "€ renégociables · campagne 2026", cle=True),
+        tuile(335, 92, 300, 84, "Nb fournisseurs à renégocier", "Fournisseurs à renégocier"),
+        tuile(650, 92, 300, 84, "Effet prix %", "Effet prix 2026 à volumes constants", filtres=[(("c", "dim_date", "annee"), [2026])]),
+        tuile(965, 92, 295, 84, "Plafond justifié prochaine campagne %", "Déjà justifié pour 2027"),
+        *[x for i, (titre, question, mesure, cible, f) in enumerate([
+            ("1  Détecter", "Quelles matières montent ou baissent ?", "Résumé signaux", "Alertes matières", []),
+            ("2  Chiffrer", "Combien renégocier sur la campagne ?", "€ renégociables", "Synthèse campagne", []),
+            ("3  Cibler", "Qui demande plus que ses matières ?", "Résumé cible", "Fournisseurs", []),
+            ("4  Comprendre", "Prix et volumes, année sur année", "Effet prix %", "Prix & volumes", [(("c", "dim_date", "annee"), [2026])]),
+            ("5  Négocier", "Argument et contre-proposition", "Résumé 2027", "Fiche négociation", []),
+        ]) for x in (
+            v("shape", 20, 192 + i * 102, 620, 92, objets={"couleur": "#FFFFFF"}),
+            v("textbox", 36, 200 + i * 102, 320, 76, texte=(titre, question), objets={"etape": True}),
+            v("card", 360, 204 + i * 102, 150, 68, {"Values": [m(mesure)]}, objets={"police": 16, "sans_bord": True, "fond": "#FFFFFF"},
+              filtres=f),
+            v("nav", 520, 218 + i * 102, 104, 40, objets={"cible": cible, "texte": "Ouvrir  →", "actif": True, "centre": True}),
+        )],
+        v("card", 660, 192, 600, 120, {"Values": [m("Argument anticipé")]}, titre="À retenir",
+          objets={"police": 13, "fond": NAVY, "valeur": "#EEF2EF", "titre_c": MENTHE}),
+        v("lineChart", 660, 326, 600, 366,
           {"Category": [("c", "dim_date", "date")], "Y": [m("Indice prix fournisseur"), m("Indice coût matière")]},
-          titre="Décalage : prix fournisseurs vs coût de leurs matières (base 100 = 2023) · choisissez un fournisseur sur la page Fournisseurs",
-          objets={"continu": True}),
+          titre="Décalage : prix fournisseurs vs coût de leurs matières (base 100 = 2023)", objets={"continu": True}),
     ]),
     ("Synthèse campagne", entete(
         "Cette hausse fournisseur est-elle justifiée ?",
@@ -939,12 +976,6 @@ PAGES = [
 # Design : thème, barre de navigation latérale, zone de contenu
 # --------------------------------------------------------------------------------------
 # Palette catégorielle validée (skill dataviz : l'ordre garantit la lisibilité daltonisme)
-# Charte Buyvera (design system « Buyvera ») ; séries validées au contrôle daltonisme du skill dataviz
-SERIES = ["#16876A", "#C9781C", "#3C7DC4", "#B4508A", "#6E9A2A", "#7B5CC4", "#D0563F", "#2AA0B3"]
-NAVY, NAVY_2, ACCENT, FOND, BORD = "#12211D", "#1C2E29", "#0F5C4A", "#F6F4EE", "#DCD8CE"
-TEXTE, TEXTE_2, MUET, GRILLE = "#12211D", "#56655F", "#56655F", "#E6E2D8"
-MENTHE, SIGNAL = "#7FD1B3", "#C9781C"
-TEAL, AMBRE, GRIS = ACCENT, "#eda100", MUET
 LARGEUR_NAV = 200
 # Ordre de navigation : le parcours de négociation, puis les pages de détail
 ORDRE = ["Parcours négociation", "Synthèse campagne", "Alertes matières", "Fournisseurs", "Fiche négociation",
@@ -984,10 +1015,9 @@ THEME = {
         "*": {"*": {
             "background": [{"show": True, "color": {"solid": {"color": "#FFFFFF"}}, "transparency": 0}],
             "border": [{"show": True, "color": {"solid": {"color": BORD}}, "radius": 12}],
-            "dropShadow": [{"show": True, "color": {"solid": {"color": NAVY}}, "transparency": 92,
-                            "position": "Outer", "preset": "Bottom", "shadowBlur": 8, "shadowDistance": 1}],
-            "padding": [{"top": 8, "bottom": 8, "left": 12, "right": 12}],
-            "title": [{"show": True, "fontColor": {"solid": {"color": TEXTE}}, "fontSize": 11,
+            "dropShadow": [{"show": False}],
+            "padding": [{"top": 12, "bottom": 12, "left": 16, "right": 16}],
+            "title": [{"show": True, "fontColor": {"solid": {"color": TEXTE}}, "fontSize": 12,
                        "fontFamily": "Segoe UI Semibold"}],
             "categoryAxis": [{"labelColor": {"solid": {"color": TEXTE_2}}, "gridlineShow": False,
                               "innerPadding": 35}],
@@ -1011,31 +1041,36 @@ THEME = {
                           "values": [{"backColorSecondary": {"solid": {"color": "#FAF8F3"}}}]}},
         "slicer": {"*": {"header": [{"fontColor": {"solid": {"color": TEXTE_2}}, "textSize": 9}],
                          "items": [{"fontColor": {"solid": {"color": TEXTE}}}]}},
-        "card": {"*": {"labels": [{"color": {"solid": {"color": TEXTE}}, "fontSize": 24}],
-                       "categoryLabels": [{"show": False}]}},
+        "card": {"*": {"labels": [{"color": {"solid": {"color": TEXTE}}, "fontSize": 24, "fontFamily": "Segoe UI Bold"}],
+                       "categoryLabels": [{"show": False}],
+                       "title": [{"fontColor": {"solid": {"color": TEXTE_2}}, "fontSize": 10, "fontFamily": "Segoe UI"}]}},
         "lineChart": {"*": {"lineStyles": [{"strokeWidth": 2}]}},
     },
 }
 
 
+NAV = ["Parcours négociation", "Synthèse campagne", "Alertes matières", "Fournisseurs", "Prix & volumes",
+       "Fiche négociation", "Matières", "Rattachement"]  # Détail article : par extraction uniquement
+NAV_COURT = {"Parcours négociation": "Parcours", "Synthèse campagne": "Synthèse", "Alertes matières": "Alertes",
+             "Fournisseurs": "Fournisseurs", "Prix & volumes": "Prix & volumes", "Fiche négociation": "Négocier",
+             "Matières": "Matières", "Rattachement": "Rattachement"}
+
+
 def barre_navigation(page: int) -> list[dict]:
-    """Bandeau bleu marine à gauche : logo, un bouton par page (page active en teal), sources."""
-    l = [v("shape", 0, 0, LARGEUR_NAV, 720, objets={"couleur": NAVY}),
-         v("textbox", 18, 22, 170, 70, texte=("Buyvera BI", "Analyse des hausses tarifaires"),
-           objets={"blanc": True})]
-    for i, (nom, _) in enumerate(PAGES):
-        l.append(v("nav", 12, 108 + i * 50, LARGEUR_NAV - 24, 40,
-                   objets={"cible": i, "texte": f"{ICONES[i]}   {COURT.get(nom, nom)}", "actif": i == page}))
-    l.append(v("textbox", 14, 640, 180, 70,
-               texte=("Sources", "Indices INSEE réels · tarifs, volumes et fournisseurs fictifs"),
-               objets={"blanc": True, "petit": True}))
+    """Bandeau encre en haut : logo buyvera, un onglet par page du parcours (onglet actif en vert marque)."""
+    nom_page = PAGES[page][0]
+    l = [v("shape", 0, 0, 1280, HAUT, objets={"couleur": NAVY}),
+         v("textbox", 20, 10, 170, 40, texte=("Buyvera BI", ""), objets={"blanc": True, "logo": True})]
+    w = (1280 - 200 - 16) / len(NAV)
+    for i, nom in enumerate(NAV):
+        l.append(v("nav", round(200 + i * w), 10, round(w - 6), 36,
+                   objets={"cible": nom, "texte": NAV_COURT[nom], "actif": nom == nom_page, "onglet": True}))
     return l
 
 
 def recaler(d: dict) -> dict:
-    """Place un visuel conçu sur 20-1260 px dans la zone de contenu, à droite de la barre."""
-    ech = (1280 - LARGEUR_NAV - 30) / 1240
-    return {**d, "x": round(LARGEUR_NAV + 10 + (d["x"] - 20) * ech), "w": round(d["w"] * ech)}
+    """Décale un visuel conçu sur 0-720 px sous le bandeau de navigation."""
+    return {**d, "y": d["y"] + HAUT}
 
 
 def desc(texte: str, indent: str) -> list[str]:
@@ -1180,14 +1215,15 @@ def visuel(page: int, i: int, d: dict) -> dict:
             t1, t2 = "15pt", "11pt"
         c1, c2 = ("#EEF2EF", "#9DB0A8") if blanc else ((ACCENT, TEXTE) if d["objets"].get("etape") else (TEXTE, GRIS))
         if not d["objets"].get("etape"):
-            t1, t2 = ("10pt", "8pt") if petit else (("16pt", "9pt") if blanc else ("20pt", "10pt"))
+            t1, t2 = ("10pt", "8pt") if petit else (("16pt", "9pt") if blanc else ("18pt", "10pt"))
         style = {"fontWeight": "bold", "fontSize": t1, "color": c1, "fontFamily": "Segoe UI Semibold"}
         runs = ([{"value": "Buy", "textStyle": style}, {"value": "vera", "textStyle": {**style, "color": MENTHE}},
                  {"value": " BI", "textStyle": style}] if titre == "Buyvera BI"
                 else [{"value": titre, "textStyle": style}])
-        sv["objects"] = {"general": [{"properties": {"paragraphs": [
-            {"textRuns": runs},
-            {"textRuns": [{"value": sous, "textStyle": {"fontSize": t2, "color": c2}}]}]}}]}
+        paras = [{"textRuns": runs}]
+        if sous:
+            paras.append({"textRuns": [{"value": sous, "textStyle": {"fontSize": t2, "color": c2}}]})
+        sv["objects"] = {"general": [{"properties": {"paragraphs": paras}}]}
     elif d["typ"] == "shape":
         sv["objects"] = {
             "fill": [{"properties": {"show": lit(True)}},
@@ -1203,6 +1239,8 @@ def visuel(page: int, i: int, d: dict) -> dict:
         sv["visualType"] = "actionButton"
         o = d["objets"]
         fond, texte = (ACCENT, "#FFFFFF") if o["actif"] else (NAVY, "#9DB0A8")
+        if o.get("onglet") and o["actif"]:
+            fond, texte = (NAVY_2, MENTHE)
         def etat(sel: str, props: dict) -> dict:
             return {"properties": props, "selector": {"id": sel}}
         sv["objects"] = {
@@ -1210,7 +1248,8 @@ def visuel(page: int, i: int, d: dict) -> dict:
             "text": [{"properties": {"show": lit(True)}},
                      etat("default", {"text": lit(o["texte"]), "fontColor": {"solid": {"color": lit(texte)}},
                                       "fontSize": lit(11), "fontFamily": lit("Segoe UI Semibold"),
-                                      "horizontalAlignment": lit("left"), "leftMargin": lit(14)}),
+                                      "horizontalAlignment": lit("center" if o.get("onglet") or o.get("centre") else "left"),
+                                      "leftMargin": lit(14)}),
                      etat("hover", {"text": lit(o["texte"]), "fontColor": {"solid": {"color": lit("#FFFFFF")}}})],
             "fill": [{"properties": {"show": lit(True)}},
                      etat("default", {"fillColor": {"solid": {"color": lit(fond)}}, "transparency": lit(0)}),
@@ -1271,14 +1310,28 @@ def visuel(page: int, i: int, d: dict) -> dict:
             objets["header"] = [{"properties": {"text": lit(d["objets"]["entete"]), "show": lit(True)}}]
         if d["typ"] == "card":
             objets["categoryLabels"] = [{"properties": {"show": lit(False)}}]
+            lab = {}
             if d["objets"].get("police"):
-                objets["labels"] = [{"properties": {"fontSize": lit(d["objets"]["police"])}}]
+                lab["fontSize"] = lit(d["objets"]["police"])
+            if d["objets"].get("valeur"):
+                lab["color"] = {"solid": {"color": lit(d["objets"]["valeur"])}}
+            if lab:
+                objets["labels"] = [{"properties": lab}]
+            if d["objets"].get("fond"):
+                vc["background"] = [{"properties": {"show": lit(True), "color": {"solid": {"color": lit(d["objets"]["fond"])}},
+                                                     "transparency": lit(0)}}]
+            if d["objets"].get("sans_bord") or d["objets"].get("fond"):
+                vc["border"] = [{"properties": {"show": lit(False)}}]
+            if d["objets"].get("titre_c"):
+                vc.setdefault("title", [{"properties": {}}])
+                vc["title"][0]["properties"]["fontColor"] = {"solid": {"color": lit(d["objets"]["titre_c"])}}
         if objets:
             sv["objects"] = objets
         if d["objets"].get("noms"):
             sv["columnProperties"] = {q.ref(c): {"displayName": n} for c, n in d["objets"]["noms"].items()}
         if d["titre"]:
-            vc["title"] = [{"properties": {"show": lit(True), "text": lit(d["titre"])}}]
+            ancien = vc.get("title", [{"properties": {}}])[0]["properties"]
+            vc["title"] = [{"properties": {**ancien, "show": lit(True), "text": lit(d["titre"])}}]
     if vc:
         sv["vcObjects"] = vc
 
@@ -1375,7 +1428,8 @@ def construire(dossier_donnees: str) -> None:
     # Rapport : format report.json
     sections = [{
         "config": section_config(i, p)[0], "displayName": p, "displayOption": 1, "filters": section_config(i, p)[1],
-        "height": 720.0, "name": f"ReportSection{i:02d}", "ordinal": i,
+        **({"visibility": 1} if p == "Détail article" else {}),
+        "height": 720.0 + HAUT, "name": f"ReportSection{i:02d}", "ordinal": i,
         "visualContainers": [visuel(i, j, d) for j, d in
                              enumerate(barre_navigation(i) + [recaler(x) for x in visuels])],
         "width": 1280.0} for i, (p, visuels) in enumerate(PAGES)]

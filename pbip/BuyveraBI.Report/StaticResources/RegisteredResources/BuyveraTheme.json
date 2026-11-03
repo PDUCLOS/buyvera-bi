@@ -65,25 +65,15 @@
         ],
         "dropShadow": [
           {
-            "show": true,
-            "color": {
-              "solid": {
-                "color": "#12211D"
-              }
-            },
-            "transparency": 92,
-            "position": "Outer",
-            "preset": "Bottom",
-            "shadowBlur": 8,
-            "shadowDistance": 1
+            "show": false
           }
         ],
         "padding": [
           {
-            "top": 8,
-            "bottom": 8,
-            "left": 12,
-            "right": 12
+            "top": 12,
+            "bottom": 12,
+            "left": 16,
+            "right": 16
           }
         ],
         "title": [
@@ -94,7 +84,7 @@
                 "color": "#12211D"
               }
             },
-            "fontSize": 11,
+            "fontSize": 12,
             "fontFamily": "Segoe UI Semibold"
           }
         ],
@@ -154,7 +144,7 @@
           {
             "color": {
               "solid": {
-                "color": "#F6F4EE"
+                "color": "#ECEAE3"
               }
             },
             "transparency": 0
@@ -164,7 +154,7 @@
           {
             "color": {
               "solid": {
-                "color": "#F6F4EE"
+                "color": "#ECEAE3"
               }
             },
             "transparency": 0
@@ -338,12 +328,24 @@
                 "color": "#12211D"
               }
             },
-            "fontSize": 24
+            "fontSize": 24,
+            "fontFamily": "Segoe UI Bold"
           }
         ],
         "categoryLabels": [
           {
             "show": false
+          }
+        ],
+        "title": [
+          {
+            "fontColor": {
+              "solid": {
+                "color": "#56655F"
+              }
+            },
+            "fontSize": 10,
+            "fontFamily": "Segoe UI"
           }
         ]
       }

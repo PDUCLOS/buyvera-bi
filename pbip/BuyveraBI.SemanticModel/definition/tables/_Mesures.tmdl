@@ -662,6 +662,26 @@ table _Mesures
 		displayFolder: 6. Négociation
 		lineageTag: 103be757-103a-52b3-ae4b-c02a99c6ba8c
 
+	/// Nombre de matières en hausse et en baisse sur 3 mois.
+	measure 'Résumé signaux' = ```
+			VAR _h = COUNTROWS ( FILTER ( VALUES ( dim_matiere[libelle] ), [Variation 3 mois %] > 0.05 ) )
+			VAR _b = COUNTROWS ( FILTER ( VALUES ( dim_matiere[libelle] ), [Variation 3 mois %] < -0.05 ) )
+			RETURN
+			    FORMAT ( _h + 0, "0" ) & " ▲   " & FORMAT ( _b + 0, "0" ) & " ▼"
+			```
+		displayFolder: 6. Négociation
+		lineageTag: 1daa0ec9-fb74-5c7d-9fa7-f94ee7b86b6e
+
+	/// Nombre de fournisseurs à renégocier, en clair.
+	measure 'Résumé cible' = FORMAT ( [Nb fournisseurs à renégocier] + 0, "0" ) & " fournisseurs"
+		displayFolder: 6. Négociation
+		lineageTag: 6b15e6b2-2d97-5df1-b39e-8c74d7a21602
+
+	/// Hausse déjà justifiée pour la prochaine campagne, en clair.
+	measure 'Résumé 2027' = [Prochaine campagne] & " : " & FORMAT ( [Plafond justifié prochaine campagne %], "+0.0 %" )
+		displayFolder: 6. Négociation
+		lineageTag: f05a1ee1-efa9-5acd-813f-f7d3535dead5
+
 	/// Fournisseurs dont l'écart dépasse 3 points.
 	measure 'Nb fournisseurs à renégocier' = COUNTROWS ( FILTER ( VALUES ( dim_fournisseur[nom] ), [Écart pts] > 3 ) )
 		formatString: 0
