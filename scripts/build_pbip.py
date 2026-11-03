@@ -151,6 +151,29 @@ TABLES = {
         ]),
 }
 
+TABLES["fact_hausse_article"] = dict(
+    desc="Précalcul (scripts/precalcul_hausses.py) : hausse par article pour chaque campagne N+1, fenêtre et décalage. Rend les mesures instantanées.",
+    cols=[
+        ("article_id", S, "Article.", dict(hidden=True)),
+        ("campagne", I, "Campagne N+1 (la dernière + 1 = prochaine campagne, anticipation).", dict(hidden=True)),
+        ("fenetre", I, "Fenêtre de référence des indices (mois).", dict(hidden=True)),
+        ("decalage", I, "Décalage d'application (mois).", dict(hidden=True)),
+        ("prix_n", D, "Prix brut de la campagne N.", dict(hidden=True)),
+        ("prix_n1", D, "Prix brut de la campagne N+1 (vide pour la prochaine campagne).", dict(hidden=True)),
+        ("volume_n", I, "Quantité achetée l'année N.", dict(hidden=True)),
+        ("hausse_justifiee", D, "Σ part × variation matière de l'article.", dict(hidden=True)),
+        ("comparable", B, "Vrai si l'article entre dans le panier comparable.", dict(hidden=True)),
+    ])
+TABLES["fact_impact_matiere"] = dict(
+    desc="Précalcul : surcoût justifié par chaque matière pour chaque article à la prochaine campagne.",
+    cols=[
+        ("article_id", S, "Article.", dict(hidden=True)),
+        ("matiere_id", S, "Matière.", dict(hidden=True)),
+        ("fenetre", I, "Fenêtre de référence des indices (mois).", dict(hidden=True)),
+        ("decalage", I, "Décalage d'application (mois).", dict(hidden=True)),
+        ("impact", D, "Part × variation × prix × volume, en euros.", dict(hidden=True)),
+    ])
+
 # Relations : (table plusieurs, colonne, table un, colonne). Toutes 1→N, filtrage unidirectionnel.
 RELATIONS = [
     ("fact_tarif", "article_id", "dim_article", "article_id"),
@@ -164,6 +187,9 @@ RELATIONS = [
     ("dim_article", "fournisseur_id", "dim_fournisseur", "fournisseur_id"),
     ("dim_article", "famille_id", "dim_famille", "famille_id"),
     ("dim_famille", "acheteur_id", "dim_acheteur", "acheteur_id"),
+    ("fact_hausse_article", "article_id", "dim_article", "article_id"),
+    ("fact_impact_matiere", "article_id", "dim_article", "article_id"),
+    ("fact_impact_matiere", "matiere_id", "dim_matiere", "matiere_id"),
 ]
 
 # Tables de paramètres (déconnectées) : nom → (colonne, valeurs, valeur par défaut, description)
@@ -357,12 +383,11 @@ VAR _eur = [€ renégociables]
 VAR _lev = [Levier matière]
 VAR _cli = [Effet cliquet]
 RETURN
-    IF ( ISBLANK ( _f ), "Choisissez un fournisseur pour générer sa fiche de négociation.",
-        _f & " demande " & FORMAT ( _d, "+0.0 %;-0.0 %" ) & " quand les matières n'en justifient que "
-            & FORMAT ( _j, "+0.0 %;-0.0 %" ) & " (écart " & FORMAT ( _e, "+0.0;-0.0" ) & " pts). "
-            & IF ( _eur > 0, "Montant à renégocier : " & FORMAT ( _eur, "# ##0 €" ) & ". ", "Hausse conforme aux matières. " )
-            & IF ( NOT ISBLANK ( _lev ), "Levier : " & _lev & " sur la période. ", "" )
-            & IF ( _cli > 0, "Effet cliquet sur " & _cli & " campagne(s) : les baisses matières n'ont pas été répercutées.", "" ) )"""),
+    IF ( ISBLANK ( _f ), "Choisissez un fournisseur pour générer sa fiche.",
+        "Demande " & FORMAT ( _d, "+0.0 %;-0.0 %" ) & " pour " & FORMAT ( _j, "+0.0 %;-0.0 %" ) & " justifiés"
+            & IF ( _eur > 0, " · à renégocier " & FORMAT ( _eur, "# ##0 €" ), " · conforme" )
+            & IF ( NOT ISBLANK ( _lev ), " · levier " & _lev, "" )
+            & IF ( _cli > 0, " · cliquet " & _cli & " camp.", "" ) )"""),
 
     ("Dernier indice", "7. Alertes", "#,0.0", "Valeur de l'indice au dernier mois disponible.",
      """VAR _last = CALCULATE ( MAX ( fact_indice[date] ), ALL ( fact_indice ) )
@@ -471,9 +496,9 @@ RETURN
      """VAR _p = [Plafond justifié prochaine campagne %]
 RETURN
     SWITCH ( TRUE (), ISBLANK ( _p ), BLANK (),
-        _p < 0, "▼ Convoquer le commercial : baisse à obtenir",
-        _p > 0.02, "▲ Préparer la défense : hausse à cadrer",
-        "● Suivi : hausse limitée" )"""),
+        _p < 0, "▼ Convoquer le commercial",
+        _p > 0.02, "▲ Préparer la défense",
+        "● Suivi" )"""),
     ("Couleur action", "7. Alertes", "", "Vert = baisse à obtenir, rouge = hausse à cadrer, gris = suivi.",
      """VAR _p = [Plafond justifié prochaine campagne %]
 RETURN
@@ -511,17 +536,79 @@ RETURN
      "MAXX ( ALL ( param_campagne[campagne] ), param_campagne[campagne] ) + 1"),
     ("Argument anticipé", "7. Alertes", "",
      "Phrase d'anticipation : plafond de hausse défendable pour la prochaine campagne, avant réception du tarif.",
-     """VAR _f = SELECTEDVALUE ( dim_fournisseur[nom], "l'ensemble des fournisseurs" )
-VAR _p = [Plafond justifié prochaine campagne %]
+     """VAR _p = [Plafond justifié prochaine campagne %]
 RETURN
-    "Campagne " & [Prochaine campagne] & " : les matières justifient déjà " & FORMAT ( _p, "+0.0 %;-0.0 %" )
-        & " pour " & _f & ". Au-delà, la demande est à contester."
+    [Prochaine campagne] & " : " & FORMAT ( _p, "+0.0 %;-0.0 %" ) & " déjà justifiés par les matières. Au-delà : à contester."
 """),
 
     ("Dernier indice chargé", "2. Matières", "", "Libellé du dernier mois d'indice INSEE disponible (fraîcheur).",
      """VAR _d = CALCULATE ( MAX ( fact_indice[date] ), REMOVEFILTERS ( fact_indice ), REMOVEFILTERS ( dim_date ) )
 RETURN
     "Indices INSEE à fin " & FORMAT ( _d, "mmmm yyyy" )"""),
+]
+
+def _panier_rapide(campagne: str) -> str:
+    return f"""VAR _c = {campagne}
+VAR _w = [Fenêtre mois]
+VAR _lag = [Décalage mois]
+VAR _t =
+    CALCULATETABLE (
+        fact_hausse_article,
+        fact_hausse_article[campagne] = _c,
+        fact_hausse_article[fenetre] = _w,
+        fact_hausse_article[decalage] = _lag,
+        fact_hausse_article[comparable] = TRUE ()
+    )"""
+
+
+PN, PN1, VN, J = ("fact_hausse_article[prix_n]", "fact_hausse_article[prix_n1]",
+                  "fact_hausse_article[volume_n]", "fact_hausse_article[hausse_justifiee]")
+RAPIDES = {
+    "Valeur N": _panier_rapide("[Campagne N+1]") + f"\nRETURN\n    SUMX ( _t, {PN} * {VN} )",
+    "Hausse demandée %": _panier_rapide("[Campagne N+1]") + f"""
+VAR _r = DIVIDE ( SUMX ( _t, {PN1} * {VN} ), SUMX ( _t, {PN} * {VN} ) )
+RETURN
+    IF ( NOT ISBLANK ( _r ), _r - 1 )""",
+    "Hausse justifiée %": _panier_rapide("[Campagne N+1]") + f"""
+RETURN
+    DIVIDE ( SUMX ( _t, {J} * {PN} * {VN} ), SUMX ( _t, {PN} * {VN} ) )""",
+    "€ renégociables": _panier_rapide("[Campagne N+1]") + f"""
+RETURN
+    SUMX ( _t, MAX ( 0, DIVIDE ( {PN1}, {PN} ) - 1 - {J} ) * {PN} * {VN} )""",
+    "Nb articles comparables": _panier_rapide("[Campagne N+1]") + "\nRETURN\n    COUNTROWS ( _t )",
+    "€ économisés (contre-proposition)": "VAR _acc = [Hausse acceptée %]\n" + _panier_rapide("[Campagne N+1]") + f"""
+RETURN
+    SUMX ( _t, MAX ( 0, DIVIDE ( {PN1}, {PN} ) - 1 - _acc ) * {PN} * {VN} )""",
+    "Plafond justifié prochaine campagne %": _panier_rapide("[Prochaine campagne]") + f"""
+RETURN
+    DIVIDE ( SUMX ( _t, {J} * {PN} * {VN} ), SUMX ( _t, {PN} * {VN} ) )""",
+    "Impact € prochaine campagne": """VAR _w = [Fenêtre mois]
+VAR _lag = [Décalage mois]
+VAR _r =
+    CALCULATE (
+        SUM ( fact_impact_matiere[impact] ),
+        fact_impact_matiere[fenetre] = _w,
+        fact_impact_matiere[decalage] = _lag
+    )
+RETURN
+    IF ( _r <> 0, _r )""",
+}
+MESURES = [(n, f, fmt, d, RAPIDES.get(n, e)) for n, f, fmt, d, e in MESURES]
+assert all(n in [x[0] for x in MESURES] for n in RAPIDES)
+
+MESURES += [
+    ("Conseil appro", "7. Alertes", "",
+     "Conseil d'approvisionnement avant la prochaine campagne : baisse matière → limiter les achats et attendre le nouveau tarif ; hausse > 3 % → anticiper les achats avant le 1er janvier.",
+     """VAR _p = [Plafond justifié prochaine campagne %]
+RETURN
+    SWITCH ( TRUE (), ISBLANK ( _p ), BLANK (),
+        _p < 0, "▼ Limiter les achats, attendre la baisse",
+        _p > 0.03, "▲ Anticiper les achats",
+        "● Achats normaux" )"""),
+    ("Couleur conseil", "7. Alertes", "", "Vert = attendre la baisse, rouge = anticiper avant la hausse, gris = normal.",
+     """VAR _p = [Plafond justifié prochaine campagne %]
+RETURN
+    SWITCH ( TRUE (), ISBLANK ( _p ), "#898781", _p < 0, "#0ca30c", _p > 0.03, "#d03b3b", "#898781" )"""),
 ]
 
 ROLES = {
@@ -586,8 +673,8 @@ PAGES = [
         segment(CAMPAGNE, 20, 80, titre="Campagne (N+1)"),
         segment(("c", "dim_famille", "univers"), 280, 80, titre="Univers"),
         v("scatterChart", 20, 150, 560, 550,
-          {"Category": [FOURN], "X": [m("Hausse justifiée %")], "Y": [m("Hausse demandée %")]},
-          titre="Hausse demandée × hausse justifiée", objets={"catlabels": True}),
+          {"Category": [FOURN], "X": [m("Hausse justifiée %")], "Y": [m("Hausse demandée %")], "Play": [CAMPAGNE]},
+          titre="▶ Lancez l'animation : chaque fournisseur, campagne après campagne", objets={"catlabels": True}),
         v("tableEx", 600, 150, 660, 550,
           {"Values": [FOURN, m("Statut fournisseur"), m("Hausse demandée %"), m("Hausse justifiée %"), m("Écart pts"),
                       m("€ renégociables"), m("Effet cliquet")]},
@@ -683,19 +770,22 @@ PAGES = [
                   "couleur_texte": (m("Alerte matière"), "Couleur alerte")}),
         v("tableEx", 20, 435, 640, 265,
           {"Values": [FOURN, m("Plafond justifié prochaine campagne %"), m("Impact € prochaine campagne"),
-                      m("Action fournisseur")]},
+                      m("Action fournisseur"), m("Conseil appro")]},
           titre="Plan d'action fournisseurs pour la prochaine campagne",
           ordre=(m("Plafond justifié prochaine campagne %"), 1),
           objets={"noms": {FOURN: "Fournisseur", m("Plafond justifié prochaine campagne %"): "Plafond justifié",
-                           m("Impact € prochaine campagne"): "Impact €", m("Action fournisseur"): "Action"},
+                           m("Impact € prochaine campagne"): "Impact €", m("Action fournisseur"): "Négociation",
+                           m("Conseil appro"): "Appro"},
                   "couleur_texte": (m("Action fournisseur"), "Couleur action")}),
         v("tableEx", 680, 155, 580, 545,
-          {"Values": [("c", "dim_article", "designation"), m("Impact € prochaine campagne"), m("Volume annuel"), FOURN]},
+          {"Values": [("c", "dim_article", "designation"), m("Impact € prochaine campagne"), m("Volume annuel"),
+                      m("Conseil appro")]},
           titre="Articles exposés : à partager avec les appros et les commerciaux",
           ordre=(m("Impact € prochaine campagne"), 2),
           objets={"noms": {("c", "dim_article", "designation"): "Article", FOURN: "Fournisseur",
                            ("c", "dim_famille", "libelle"): "Famille", m("Volume annuel"): "Volume / an",
-                           m("Impact € prochaine campagne"): "Impact €"}}),
+                           m("Impact € prochaine campagne"): "Impact €", m("Conseil appro"): "Appro"},
+                  "couleur_texte": (m("Conseil appro"), "Couleur conseil")}),
     ]),
     ("Fiche négociation", entete(
         "Fiche négociation",
@@ -709,11 +799,11 @@ PAGES = [
         v("card", 770, 150, 240, 96, {"Values": [m("€ renégociables")]}, titre="€ renégociables"),
         v("card", 1020, 150, 240, 96, {"Values": [m("€ économisés (contre-proposition)")]},
           titre="Gain de la contre-proposition"),
-        v("multiRowCard", 20, 258, 1240, 70, {"Values": [m("Commentaire négociation")]}, titre="Synthèse pour le rendez-vous"),
-        v("card", 20, 336, 820, 52, {"Values": [m("Argument anticipé")]}, titre=None,
-          objets={"police": 11, "wrap": True}),
-        v("card", 850, 336, 410, 52, {"Values": [m("Action fournisseur")]}, titre=None,
-          objets={"police": 11, "wrap": True}),
+        v("card", 20, 258, 1240, 70, {"Values": [m("Commentaire négociation")]}, titre="Synthèse pour le rendez-vous",
+          objets={"police": 13}),
+        v("card", 20, 336, 500, 52, {"Values": [m("Argument anticipé")]}, objets={"police": 11}),
+        v("card", 530, 336, 360, 52, {"Values": [m("Action fournisseur")]}, objets={"police": 11}),
+        v("card", 900, 336, 360, 52, {"Values": [m("Conseil appro")]}, objets={"police": 11}),
         v("clusteredColumnChart", 20, 400, 610, 300,
           {"Category": [CAMPAGNE], "Y": [m("Hausse demandée %"), m("Hausse justifiée %")]},
           titre="Historique : demandé vs justifié par campagne", ordre=(CAMPAGNE, 1), objets={"labels": True}),

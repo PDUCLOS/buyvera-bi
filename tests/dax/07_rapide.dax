@@ -1,0 +1,7 @@
+EVALUATE
+ADDCOLUMNS (
+    VALUES ( param_campagne[campagne] ),
+    "demandee", [Hausse demandée %], "justifiee", [Hausse justifiée %],
+    "eur", [€ renégociables], "plafond_2027", [Plafond justifié prochaine campagne %],
+    "impact_2027", [Impact € prochaine campagne], "conseil", [Conseil appro]
+)

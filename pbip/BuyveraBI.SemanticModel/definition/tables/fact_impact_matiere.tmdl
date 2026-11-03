@@ -1,0 +1,65 @@
+/// Précalcul : surcoût justifié par chaque matière pour chaque article à la prochaine campagne.
+table fact_impact_matiere
+	lineageTag: 8faf8694-95cb-53aa-908f-c4549e742ffe
+
+	/// Article.
+	column article_id
+		dataType: string
+		isHidden
+		lineageTag: 6f5353f3-17c1-5e87-aa5b-fe91b67ddfeb
+		summarizeBy: none
+		sourceColumn: article_id
+
+		annotation SummarizationSetBy = User
+
+	/// Matière.
+	column matiere_id
+		dataType: string
+		isHidden
+		lineageTag: c6915182-198b-5b67-9897-e5694eca9f80
+		summarizeBy: none
+		sourceColumn: matiere_id
+
+		annotation SummarizationSetBy = User
+
+	/// Fenêtre de référence des indices (mois).
+	column fenetre
+		dataType: int64
+		isHidden
+		lineageTag: 79c04572-97a6-5619-9d54-0a5e2ef140d2
+		summarizeBy: none
+		sourceColumn: fenetre
+
+		annotation SummarizationSetBy = User
+
+	/// Décalage d'application (mois).
+	column decalage
+		dataType: int64
+		isHidden
+		lineageTag: b4d3107c-5c97-57e7-ab24-a11bcce8058b
+		summarizeBy: none
+		sourceColumn: decalage
+
+		annotation SummarizationSetBy = User
+
+	/// Part × variation × prix × volume, en euros.
+	column impact
+		dataType: double
+		isHidden
+		lineageTag: d5942e92-67d1-598d-a2e4-6ddae504931a
+		summarizeBy: none
+		sourceColumn: impact
+
+		annotation SummarizationSetBy = User
+
+	partition fact_impact_matiere = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document ( File.Contents ( DossierDonnees & "fact_impact_matiere.csv" ), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv] ),
+				    Entetes = Table.PromoteHeaders ( Source, [PromoteAllScalars = true] ),
+				    Types = Table.TransformColumnTypes ( Entetes, {{"article_id", type text}, {"matiere_id", type text}, {"fenetre", Int64.Type}, {"decalage", Int64.Type}, {"impact", type number}}, "en-US" )
+				in
+				    Types
+
+	annotation PBI_ResultType = Table

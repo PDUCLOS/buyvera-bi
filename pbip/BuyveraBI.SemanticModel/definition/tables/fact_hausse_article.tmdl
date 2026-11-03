@@ -1,0 +1,105 @@
+/// Précalcul (scripts/precalcul_hausses.py) : hausse par article pour chaque campagne N+1, fenêtre et décalage. Rend les mesures instantanées.
+table fact_hausse_article
+	lineageTag: a9dfc19d-1606-5dfd-917b-2373542b5c38
+
+	/// Article.
+	column article_id
+		dataType: string
+		isHidden
+		lineageTag: eb59400d-92fe-5ada-a22b-1ac7ec662562
+		summarizeBy: none
+		sourceColumn: article_id
+
+		annotation SummarizationSetBy = User
+
+	/// Campagne N+1 (la dernière + 1 = prochaine campagne, anticipation).
+	column campagne
+		dataType: int64
+		isHidden
+		lineageTag: 1b6e7018-e506-5001-b260-db4243ae0e2f
+		summarizeBy: none
+		sourceColumn: campagne
+
+		annotation SummarizationSetBy = User
+
+	/// Fenêtre de référence des indices (mois).
+	column fenetre
+		dataType: int64
+		isHidden
+		lineageTag: 865ac502-bddd-5c2c-ab36-47554d2b0b16
+		summarizeBy: none
+		sourceColumn: fenetre
+
+		annotation SummarizationSetBy = User
+
+	/// Décalage d'application (mois).
+	column decalage
+		dataType: int64
+		isHidden
+		lineageTag: 3ca695ec-85aa-581f-9dba-6b6641f3deff
+		summarizeBy: none
+		sourceColumn: decalage
+
+		annotation SummarizationSetBy = User
+
+	/// Prix brut de la campagne N.
+	column prix_n
+		dataType: double
+		isHidden
+		lineageTag: d17a549b-8bd1-519e-a320-e6d2cb26d711
+		summarizeBy: none
+		sourceColumn: prix_n
+
+		annotation SummarizationSetBy = User
+
+	/// Prix brut de la campagne N+1 (vide pour la prochaine campagne).
+	column prix_n1
+		dataType: double
+		isHidden
+		lineageTag: d5e15199-b193-5f89-9a96-b3d616cc65e7
+		summarizeBy: none
+		sourceColumn: prix_n1
+
+		annotation SummarizationSetBy = User
+
+	/// Quantité achetée l'année N.
+	column volume_n
+		dataType: int64
+		isHidden
+		lineageTag: 5e35260e-e722-5b11-8239-d3abd04d5ebe
+		summarizeBy: none
+		sourceColumn: volume_n
+
+		annotation SummarizationSetBy = User
+
+	/// Σ part × variation matière de l'article.
+	column hausse_justifiee
+		dataType: double
+		isHidden
+		lineageTag: 24dff245-5919-5f71-a8ef-77c94ceb84cd
+		summarizeBy: none
+		sourceColumn: hausse_justifiee
+
+		annotation SummarizationSetBy = User
+
+	/// Vrai si l'article entre dans le panier comparable.
+	column comparable
+		dataType: boolean
+		isHidden
+		lineageTag: 4efbd683-d9a9-5a18-bf28-960e540badcd
+		summarizeBy: none
+		sourceColumn: comparable
+
+		annotation SummarizationSetBy = User
+
+	partition fact_hausse_article = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document ( File.Contents ( DossierDonnees & "fact_hausse_article.csv" ), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv] ),
+				    Entetes = Table.PromoteHeaders ( Source, [PromoteAllScalars = true] ),
+				    Types = Table.TransformColumnTypes ( Entetes, {{"article_id", type text}, {"campagne", Int64.Type}, {"fenetre", Int64.Type}, {"decalage", Int64.Type}, {"prix_n", type number}, {"prix_n1", type number}, {"volume_n", Int64.Type}, {"hausse_justifiee", type number}, {"comparable", type logical}}, "en-US" )
+				in
+				    Types
+
+	annotation PBI_ResultType = Table

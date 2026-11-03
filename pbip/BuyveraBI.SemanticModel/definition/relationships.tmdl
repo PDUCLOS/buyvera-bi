@@ -41,3 +41,15 @@ relationship 0a3ceecd-deaa-577c-9221-bdb9e92dcd0a
 relationship 39e3e60d-5522-59a1-80e8-81d1f4cf3e36
 	fromColumn: dim_famille.acheteur_id
 	toColumn: dim_acheteur.acheteur_id
+
+relationship dab15b50-e1d9-5649-988e-df54b5aeeb10
+	fromColumn: fact_hausse_article.article_id
+	toColumn: dim_article.article_id
+
+relationship 4ef5e506-b3a1-55bf-8492-6a9a3b0561b7
+	fromColumn: fact_impact_matiere.article_id
+	toColumn: dim_article.article_id
+
+relationship 29b54a7e-454b-5cf4-9002-3c1f985c3801
+	fromColumn: fact_impact_matiere.matiere_id
+	toColumn: dim_matiere.matiere_id

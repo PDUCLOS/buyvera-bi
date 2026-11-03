@@ -61,18 +61,19 @@ table _Mesures
 
 	/// Σ prix N × volume N sur le panier comparable (prix aux deux campagnes, volume N > 0).
 	measure 'Valeur N' = ```
-			VAR _cN1 = [Campagne N+1]
-			VAR _cN = _cN1 - 1
-			VAR _articles =
-			    ADDCOLUMNS (
-			        VALUES ( dim_article[article_id] ),
-			        "@pN", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cN ),
-			        "@pN1", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cN1 ),
-			        "@vN", CALCULATE ( SUM ( fact_achats[quantite] ), REMOVEFILTERS ( dim_date ), dim_date[annee] = _cN )
+			VAR _c = [Campagne N+1]
+			VAR _w = [Fenêtre mois]
+			VAR _lag = [Décalage mois]
+			VAR _t =
+			    CALCULATETABLE (
+			        fact_hausse_article,
+			        fact_hausse_article[campagne] = _c,
+			        fact_hausse_article[fenetre] = _w,
+			        fact_hausse_article[decalage] = _lag,
+			        fact_hausse_article[comparable] = TRUE ()
 			    )
-			VAR _panier = FILTER ( _articles, NOT ISBLANK ( [@pN] ) && NOT ISBLANK ( [@pN1] ) && [@vN] > 0 )
 			RETURN
-			    SUMX ( _panier, [@pN] * [@vN] )
+			    SUMX ( _t, fact_hausse_article[prix_n] * fact_hausse_article[volume_n] )
 			```
 		formatString: #,0 €
 		displayFolder: 1. Hausses
@@ -80,21 +81,20 @@ table _Mesures
 
 	/// Σ (prix N+1 × volume N) / Σ (prix N × volume N) − 1, pondérée par les volumes N.
 	measure 'Hausse demandée %' = ```
-			VAR _cN1 = [Campagne N+1]
-			VAR _cN = _cN1 - 1
-			VAR _articles =
-			    ADDCOLUMNS (
-			        VALUES ( dim_article[article_id] ),
-			        "@pN", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cN ),
-			        "@pN1", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cN1 ),
-			        "@vN", CALCULATE ( SUM ( fact_achats[quantite] ), REMOVEFILTERS ( dim_date ), dim_date[annee] = _cN )
+			VAR _c = [Campagne N+1]
+			VAR _w = [Fenêtre mois]
+			VAR _lag = [Décalage mois]
+			VAR _t =
+			    CALCULATETABLE (
+			        fact_hausse_article,
+			        fact_hausse_article[campagne] = _c,
+			        fact_hausse_article[fenetre] = _w,
+			        fact_hausse_article[decalage] = _lag,
+			        fact_hausse_article[comparable] = TRUE ()
 			    )
-			VAR _panier = FILTER ( _articles, NOT ISBLANK ( [@pN] ) && NOT ISBLANK ( [@pN1] ) && [@vN] > 0 )
-			VAR _avant = SUMX ( _panier, [@pN] * [@vN] )
-			VAR _apres = SUMX ( _panier, [@pN1] * [@vN] )
-			VAR _ratio = DIVIDE ( _apres, _avant )
+			VAR _r = DIVIDE ( SUMX ( _t, fact_hausse_article[prix_n1] * fact_hausse_article[volume_n] ), SUMX ( _t, fact_hausse_article[prix_n] * fact_hausse_article[volume_n] ) )
 			RETURN
-			    IF ( NOT ISBLANK ( _ratio ), _ratio - 1 )
+			    IF ( NOT ISBLANK ( _r ), _r - 1 )
 			```
 		formatString: 0.0%
 		displayFolder: 1. Hausses
@@ -102,33 +102,19 @@ table _Mesures
 
 	/// Σ (part matière × variation matière), non matière à 2 %/an comprise, pondérée comme la hausse demandée.
 	measure 'Hausse justifiée %' = ```
-			VAR _cN1 = [Campagne N+1]
-			VAR _cN = _cN1 - 1
-			VAR _articles =
-			    ADDCOLUMNS (
-			        VALUES ( dim_article[article_id] ),
-			        "@pN", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cN ),
-			        "@pN1", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cN1 ),
-			        "@vN", CALCULATE ( SUM ( fact_achats[quantite] ), REMOVEFILTERS ( dim_date ), dim_date[annee] = _cN )
-			    )
-			VAR _panier = FILTER ( _articles, NOT ISBLANK ( [@pN] ) && NOT ISBLANK ( [@pN1] ) && [@vN] > 0 )
-			VAR _variations =
+			VAR _c = [Campagne N+1]
+			VAR _w = [Fenêtre mois]
+			VAR _lag = [Décalage mois]
+			VAR _t =
 			    CALCULATETABLE (
-			        ADDCOLUMNS ( VALUES ( dim_matiere[matiere_id] ), "@var", [Variation matière %] ),
-			        REMOVEFILTERS ( dim_matiere )
-			    )
-			VAR _panierJ =
-			    ADDCOLUMNS (
-			        _panier,
-			        "@j",
-			            SUMX (
-			                CALCULATETABLE ( bridge_composition, REMOVEFILTERS ( dim_matiere ) ),
-			                VAR _m = bridge_composition[matiere_id]
-			                RETURN bridge_composition[part] * MAXX ( FILTER ( _variations, dim_matiere[matiere_id] = _m ), [@var] )
-			            )
+			        fact_hausse_article,
+			        fact_hausse_article[campagne] = _c,
+			        fact_hausse_article[fenetre] = _w,
+			        fact_hausse_article[decalage] = _lag,
+			        fact_hausse_article[comparable] = TRUE ()
 			    )
 			RETURN
-			    DIVIDE ( SUMX ( _panierJ, [@j] * [@pN] * [@vN] ), SUMX ( _panierJ, [@pN] * [@vN] ) )
+			    DIVIDE ( SUMX ( _t, fact_hausse_article[hausse_justifiee] * fact_hausse_article[prix_n] * fact_hausse_article[volume_n] ), SUMX ( _t, fact_hausse_article[prix_n] * fact_hausse_article[volume_n] ) )
 			```
 		formatString: 0.0%
 		displayFolder: 1. Hausses
@@ -147,33 +133,19 @@ table _Mesures
 
 	/// Σ par article de MAX(0, hausse demandée − hausse justifiée) × prix N × volume N.
 	measure '€ renégociables' = ```
-			VAR _cN1 = [Campagne N+1]
-			VAR _cN = _cN1 - 1
-			VAR _articles =
-			    ADDCOLUMNS (
-			        VALUES ( dim_article[article_id] ),
-			        "@pN", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cN ),
-			        "@pN1", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cN1 ),
-			        "@vN", CALCULATE ( SUM ( fact_achats[quantite] ), REMOVEFILTERS ( dim_date ), dim_date[annee] = _cN )
-			    )
-			VAR _panier = FILTER ( _articles, NOT ISBLANK ( [@pN] ) && NOT ISBLANK ( [@pN1] ) && [@vN] > 0 )
-			VAR _variations =
+			VAR _c = [Campagne N+1]
+			VAR _w = [Fenêtre mois]
+			VAR _lag = [Décalage mois]
+			VAR _t =
 			    CALCULATETABLE (
-			        ADDCOLUMNS ( VALUES ( dim_matiere[matiere_id] ), "@var", [Variation matière %] ),
-			        REMOVEFILTERS ( dim_matiere )
-			    )
-			VAR _panierJ =
-			    ADDCOLUMNS (
-			        _panier,
-			        "@j",
-			            SUMX (
-			                CALCULATETABLE ( bridge_composition, REMOVEFILTERS ( dim_matiere ) ),
-			                VAR _m = bridge_composition[matiere_id]
-			                RETURN bridge_composition[part] * MAXX ( FILTER ( _variations, dim_matiere[matiere_id] = _m ), [@var] )
-			            )
+			        fact_hausse_article,
+			        fact_hausse_article[campagne] = _c,
+			        fact_hausse_article[fenetre] = _w,
+			        fact_hausse_article[decalage] = _lag,
+			        fact_hausse_article[comparable] = TRUE ()
 			    )
 			RETURN
-			    SUMX ( _panierJ, MAX ( 0, DIVIDE ( [@pN1], [@pN] ) - 1 - [@j] ) * [@pN] * [@vN] )
+			    SUMX ( _t, MAX ( 0, DIVIDE ( fact_hausse_article[prix_n1], fact_hausse_article[prix_n] ) - 1 - fact_hausse_article[hausse_justifiee] ) * fact_hausse_article[prix_n] * fact_hausse_article[volume_n] )
 			```
 		formatString: #,0 €
 		displayFolder: 1. Hausses
@@ -181,18 +153,19 @@ table _Mesures
 
 	/// Articles du panier comparable N / N+1.
 	measure 'Nb articles comparables' = ```
-			VAR _cN1 = [Campagne N+1]
-			VAR _cN = _cN1 - 1
-			VAR _articles =
-			    ADDCOLUMNS (
-			        VALUES ( dim_article[article_id] ),
-			        "@pN", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cN ),
-			        "@pN1", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cN1 ),
-			        "@vN", CALCULATE ( SUM ( fact_achats[quantite] ), REMOVEFILTERS ( dim_date ), dim_date[annee] = _cN )
+			VAR _c = [Campagne N+1]
+			VAR _w = [Fenêtre mois]
+			VAR _lag = [Décalage mois]
+			VAR _t =
+			    CALCULATETABLE (
+			        fact_hausse_article,
+			        fact_hausse_article[campagne] = _c,
+			        fact_hausse_article[fenetre] = _w,
+			        fact_hausse_article[decalage] = _lag,
+			        fact_hausse_article[comparable] = TRUE ()
 			    )
-			VAR _panier = FILTER ( _articles, NOT ISBLANK ( [@pN] ) && NOT ISBLANK ( [@pN1] ) && [@vN] > 0 )
 			RETURN
-			    COUNTROWS ( _panier )
+			    COUNTROWS ( _t )
 			```
 		formatString: #,0
 		displayFolder: 1. Hausses
@@ -310,18 +283,19 @@ table _Mesures
 	/// Σ par article de MAX(0, hausse demandée − hausse acceptée) × prix N × volume N : gain si le fournisseur accepte la contre-proposition.
 	measure '€ économisés (contre-proposition)' = ```
 			VAR _acc = [Hausse acceptée %]
-			VAR _cN1 = [Campagne N+1]
-			VAR _cN = _cN1 - 1
-			VAR _articles =
-			    ADDCOLUMNS (
-			        VALUES ( dim_article[article_id] ),
-			        "@pN", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cN ),
-			        "@pN1", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cN1 ),
-			        "@vN", CALCULATE ( SUM ( fact_achats[quantite] ), REMOVEFILTERS ( dim_date ), dim_date[annee] = _cN )
+			VAR _c = [Campagne N+1]
+			VAR _w = [Fenêtre mois]
+			VAR _lag = [Décalage mois]
+			VAR _t =
+			    CALCULATETABLE (
+			        fact_hausse_article,
+			        fact_hausse_article[campagne] = _c,
+			        fact_hausse_article[fenetre] = _w,
+			        fact_hausse_article[decalage] = _lag,
+			        fact_hausse_article[comparable] = TRUE ()
 			    )
-			VAR _panier = FILTER ( _articles, NOT ISBLANK ( [@pN] ) && NOT ISBLANK ( [@pN1] ) && [@vN] > 0 )
 			RETURN
-			    SUMX ( _panier, MAX ( 0, DIVIDE ( [@pN1], [@pN] ) - 1 - _acc ) * [@pN] * [@vN] )
+			    SUMX ( _t, MAX ( 0, DIVIDE ( fact_hausse_article[prix_n1], fact_hausse_article[prix_n] ) - 1 - _acc ) * fact_hausse_article[prix_n] * fact_hausse_article[volume_n] )
 			```
 		formatString: #,0 €
 		displayFolder: 6. Négociation
@@ -370,12 +344,11 @@ table _Mesures
 			VAR _lev = [Levier matière]
 			VAR _cli = [Effet cliquet]
 			RETURN
-			    IF ( ISBLANK ( _f ), "Choisissez un fournisseur pour générer sa fiche de négociation.",
-			        _f & " demande " & FORMAT ( _d, "+0.0 %;-0.0 %" ) & " quand les matières n'en justifient que "
-			            & FORMAT ( _j, "+0.0 %;-0.0 %" ) & " (écart " & FORMAT ( _e, "+0.0;-0.0" ) & " pts). "
-			            & IF ( _eur > 0, "Montant à renégocier : " & FORMAT ( _eur, "# ##0 €" ) & ". ", "Hausse conforme aux matières. " )
-			            & IF ( NOT ISBLANK ( _lev ), "Levier : " & _lev & " sur la période. ", "" )
-			            & IF ( _cli > 0, "Effet cliquet sur " & _cli & " campagne(s) : les baisses matières n'ont pas été répercutées.", "" ) )
+			    IF ( ISBLANK ( _f ), "Choisissez un fournisseur pour générer sa fiche.",
+			        "Demande " & FORMAT ( _d, "+0.0 %;-0.0 %" ) & " pour " & FORMAT ( _j, "+0.0 %;-0.0 %" ) & " justifiés"
+			            & IF ( _eur > 0, " · à renégocier " & FORMAT ( _eur, "# ##0 €" ), " · conforme" )
+			            & IF ( NOT ISBLANK ( _lev ), " · levier " & _lev, "" )
+			            & IF ( _cli > 0, " · cliquet " & _cli & " camp.", "" ) )
 			```
 		displayFolder: 6. Négociation
 		lineageTag: e240ea0b-a1c3-5dab-8c4a-a0cb582f02c8
@@ -458,31 +431,19 @@ table _Mesures
 
 	/// Hausse que les matières justifient déjà pour la prochaine campagne, sur le tarif en vigueur pondéré par les volumes : au-delà, la demande est contestable.
 	measure 'Plafond justifié prochaine campagne %' = ```
-			VAR _cBase = MAXX ( ALL ( param_campagne[campagne] ), param_campagne[campagne] )
-			VAR _variations =
+			VAR _c = [Prochaine campagne]
+			VAR _w = [Fenêtre mois]
+			VAR _lag = [Décalage mois]
+			VAR _t =
 			    CALCULATETABLE (
-			        ADDCOLUMNS ( VALUES ( dim_matiere[matiere_id] ), "@var", [Variation anticipée %] ),
-			        REMOVEFILTERS ( dim_matiere )
-			    )
-			VAR _articles =
-			    ADDCOLUMNS (
-			        VALUES ( dim_article[article_id] ),
-			        "@p", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cBase ),
-			        "@v", CALCULATE ( SUM ( fact_achats[quantite] ), REMOVEFILTERS ( dim_date ), dim_date[annee] = _cBase - 1 )
-			    )
-			VAR _panier = FILTER ( _articles, NOT ISBLANK ( [@p] ) && [@v] > 0 )
-			VAR _panierJ =
-			    ADDCOLUMNS (
-			        _panier,
-			        "@j",
-			            SUMX (
-			                CALCULATETABLE ( bridge_composition, REMOVEFILTERS ( dim_matiere ) ),
-			                VAR _m = bridge_composition[matiere_id]
-			                RETURN bridge_composition[part] * MAXX ( FILTER ( _variations, dim_matiere[matiere_id] = _m ), [@var] )
-			            )
+			        fact_hausse_article,
+			        fact_hausse_article[campagne] = _c,
+			        fact_hausse_article[fenetre] = _w,
+			        fact_hausse_article[decalage] = _lag,
+			        fact_hausse_article[comparable] = TRUE ()
 			    )
 			RETURN
-			    DIVIDE ( SUMX ( _panierJ, [@j] * [@p] * [@v] ), SUMX ( _panierJ, [@p] * [@v] ) )
+			    DIVIDE ( SUMX ( _t, fact_hausse_article[hausse_justifiee] * fact_hausse_article[prix_n] * fact_hausse_article[volume_n] ), SUMX ( _t, fact_hausse_article[prix_n] * fact_hausse_article[volume_n] ) )
 			```
 		formatString: +0.0%;-0.0%;0.0%
 		displayFolder: 7. Alertes
@@ -490,31 +451,16 @@ table _Mesures
 
 	/// Surcoût que les matières justifient déjà pour la prochaine campagne (Σ part × variation acquise × prix × volume). Si une matière est sélectionnée, seule sa contribution est comptée : articles impactés par cette matière.
 	measure 'Impact € prochaine campagne' = ```
-			VAR _cBase = MAXX ( ALL ( param_campagne[campagne] ), param_campagne[campagne] )
-			VAR _variations =
-			    CALCULATETABLE (
-			        ADDCOLUMNS ( VALUES ( dim_matiere[matiere_id] ), "@var", [Variation anticipée %] ),
-			        REMOVEFILTERS ( dim_matiere )
-			    )
-			VAR _articles =
-			    ADDCOLUMNS (
-			        VALUES ( dim_article[article_id] ),
-			        "@p", CALCULATE ( SUM ( fact_tarif[prix_brut] ), REMOVEFILTERS ( dim_date ), fact_tarif[campagne] = _cBase ),
-			        "@v", CALCULATE ( SUM ( fact_achats[quantite] ), REMOVEFILTERS ( dim_date ), dim_date[annee] = _cBase - 1 )
-			    )
-			VAR _panier = FILTER ( _articles, NOT ISBLANK ( [@p] ) && [@v] > 0 )
-			VAR _impact =
-			    SUMX (
-			        _panier,
-			        [@p] * [@v]
-			            * SUMX (
-			                CALCULATETABLE ( bridge_composition ),
-			                VAR _m = bridge_composition[matiere_id]
-			                RETURN bridge_composition[part] * MAXX ( FILTER ( _variations, dim_matiere[matiere_id] = _m ), [@var] )
-			            )
+			VAR _w = [Fenêtre mois]
+			VAR _lag = [Décalage mois]
+			VAR _r =
+			    CALCULATE (
+			        SUM ( fact_impact_matiere[impact] ),
+			        fact_impact_matiere[fenetre] = _w,
+			        fact_impact_matiere[decalage] = _lag
 			    )
 			RETURN
-			    IF ( _impact <> 0, _impact )
+			    IF ( _r <> 0, _r )
 			```
 		formatString: #,0 €
 		displayFolder: 7. Alertes
@@ -535,9 +481,9 @@ table _Mesures
 			VAR _p = [Plafond justifié prochaine campagne %]
 			RETURN
 			    SWITCH ( TRUE (), ISBLANK ( _p ), BLANK (),
-			        _p < 0, "▼ Convoquer le commercial : baisse à obtenir",
-			        _p > 0.02, "▲ Préparer la défense : hausse à cadrer",
-			        "● Suivi : hausse limitée" )
+			        _p < 0, "▼ Convoquer le commercial",
+			        _p > 0.02, "▲ Préparer la défense",
+			        "● Suivi" )
 			```
 		displayFolder: 7. Alertes
 		lineageTag: 2af1133a-157a-53d9-9be0-d8be6ad9cf46
@@ -613,11 +559,9 @@ table _Mesures
 
 	/// Phrase d'anticipation : plafond de hausse défendable pour la prochaine campagne, avant réception du tarif.
 	measure 'Argument anticipé' = ```
-			VAR _f = SELECTEDVALUE ( dim_fournisseur[nom], "l'ensemble des fournisseurs" )
 			VAR _p = [Plafond justifié prochaine campagne %]
 			RETURN
-			    "Campagne " & [Prochaine campagne] & " : les matières justifient déjà " & FORMAT ( _p, "+0.0 %;-0.0 %" )
-			        & " pour " & _f & ". Au-delà, la demande est à contester."
+			    [Prochaine campagne] & " : " & FORMAT ( _p, "+0.0 %;-0.0 %" ) & " déjà justifiés par les matières. Au-delà : à contester."
 			```
 		displayFolder: 7. Alertes
 		lineageTag: 944a7d6e-558f-5416-8171-5f18e67c25f4
@@ -630,6 +574,27 @@ table _Mesures
 			```
 		displayFolder: 2. Matières
 		lineageTag: bcb2db07-0c53-5d4e-8c8f-e06673eeba45
+
+	/// Conseil d'approvisionnement avant la prochaine campagne : baisse matière → limiter les achats et attendre le nouveau tarif ; hausse > 3 % → anticiper les achats avant le 1er janvier.
+	measure 'Conseil appro' = ```
+			VAR _p = [Plafond justifié prochaine campagne %]
+			RETURN
+			    SWITCH ( TRUE (), ISBLANK ( _p ), BLANK (),
+			        _p < 0, "▼ Limiter les achats, attendre la baisse",
+			        _p > 0.03, "▲ Anticiper les achats",
+			        "● Achats normaux" )
+			```
+		displayFolder: 7. Alertes
+		lineageTag: 9b49e1d0-595e-53a5-8a33-f18f3aa6e6fb
+
+	/// Vert = attendre la baisse, rouge = anticiper avant la hausse, gris = normal.
+	measure 'Couleur conseil' = ```
+			VAR _p = [Plafond justifié prochaine campagne %]
+			RETURN
+			    SWITCH ( TRUE (), ISBLANK ( _p ), "#898781", _p < 0, "#0ca30c", _p > 0.03, "#d03b3b", "#898781" )
+			```
+		displayFolder: 7. Alertes
+		lineageTag: 5a6e3302-8043-51ec-bdb7-03864b704d79
 
 	column masque
 		dataType: int64
