@@ -1,0 +1,12 @@
+// Les 5 chiffres clés comparés au tableau de bord Claude (campagne 2026, fenêtre 6 mois, sans décalage)
+EVALUATE
+CALCULATETABLE (
+    ROW (
+        "hausse_demandee_2026", [Hausse demandée %],
+        "hausse_justifiee_2026", [Hausse justifiée %],
+        "eur_renegociables_2026", [€ renégociables],
+        "eur_orlenza_2026", CALCULATE ( [€ renégociables], dim_fournisseur[nom] = "Orlenza Thermique" ),
+        "plafond_2027", [Plafond justifié prochaine campagne %]
+    ),
+    param_campagne[campagne] = 2026
+)

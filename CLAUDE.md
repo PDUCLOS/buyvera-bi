@@ -19,6 +19,7 @@ Référence complète : `PROJET_BUYVERA_BI.md`. Idées d'évolution : `docs/idee
 7. Validation : `powershell -File scripts\dax_query.ps1 -Fichier tests\dax\<requête>` interroge le moteur local de Desktop
    (ADOMD fourni avec Desktop). Si les tables sont vides après ouverture, lancer `tests\dax\actualiser_tout.json` (refresh TMSL).
    `02_synthese_campagnes.dax` doit redonner exactement la section 6 du rapport de contrôle.
+`python scripts/export_claude.py` → `claude-dashboard/*.csv` (volet 2) et relève les 5 chiffres clés dans Power BI ouvert.
 `python scripts/push_mesures.py` pousse les mesures dans le modèle ouvert sans relancer Desktop.
 Toujours relancer les contrôles après une modification des scripts. Le rapport de contrôle fait foi pour les chiffres de référence.
 - La part non matière est la « matière » `NM` : série d'hypothèse à 2 %/an dans `fact_indice`, présente dans `bridge_composition`. La hausse justifiée est donc Σ part × variation sur toutes les lignes du pont.

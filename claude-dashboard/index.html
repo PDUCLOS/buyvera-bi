@@ -1,0 +1,288 @@
+<meta name="dash-one-writer">
+<style>
+  #dash-root { --dash-gutter: var(--cds-pad-lg); }
+  .bv { font-family: var(--font-anthropic-sans); display: grid; gap: var(--cds-gap-xl); max-width: 1180px; margin-inline: auto; }
+  .bv-head h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; text-wrap: balance; }
+  .bv-head p { margin: var(--cds-gap-sm) 0 0; color: var(--color-fg-muted); max-width: 70ch; line-height: 1.5; }
+  .bv-head p b, .bv-card p b { color: var(--color-fg); font-weight: 600; }
+  .bv-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: var(--cds-gap-md); }
+  .bv-kpi, .bv-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); }
+  .bv-kpi { padding: var(--cds-pad-md) var(--cds-pad-lg); display: grid; gap: var(--cds-gap-xs); align-content: start; }
+  .bv-kpi span { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .bv-kpi strong { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); font-variant-numeric: tabular-nums; min-height: 1.2em; }
+  .bv-kpi small { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
+  .bv-kpi.is-key strong { color: var(--color-bad); }
+  .bv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); gap: var(--cds-gap-md); }
+  .bv-card { padding: var(--cds-pad-lg); display: grid; gap: var(--cds-gap-sm); align-content: start; min-width: 0; }
+  .bv-card h2 { margin: 0; font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); }
+  .bv-card > p { margin: 0; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); line-height: 1.45; }
+  .bv-chart { position: relative; min-height: 380px; }
+  .bv-tip { position: absolute; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); line-height: 1.45; white-space: nowrap; }
+  .bv-tip b { display: block; color: var(--cds-text-secondary); font-weight: 600; }
+  .bv-legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .bv-legend i { display: inline-block; width: .6rem; height: .6rem; border-radius: 50%; margin-right: .35rem; vertical-align: -1px; }
+  .bv-wrap { overflow-x: auto; max-height: 34rem; }
+  .bv table { width: 100%; border-collapse: collapse; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
+  .bv th { position: sticky; top: 0; background: var(--color-panel); text-align: left; font-weight: 600; color: var(--color-fg-muted); padding: var(--cds-pad-xs) var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); white-space: nowrap; }
+  .bv td { padding: var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); vertical-align: top; }
+  .bv td.num, .bv th.num { text-align: right; white-space: nowrap; }
+  .bv td.txt { min-width: 16rem; color: var(--color-fg-muted); line-height: 1.45; }
+  .bv-pill { display: inline-block; padding: .1rem .5rem; border-radius: 999px; font-weight: 600; white-space: nowrap; border: 1px solid currentColor; }
+  .bv-bad { color: var(--color-bad); } .bv-warn { color: var(--color-warn); } .bv-ok { color: var(--color-ok); }
+  .bv-check { font-weight: 600; }
+  [data-dash-source-state=empty] { color: transparent; }
+  [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+  @media (prefers-reduced-motion: no-preference) {
+    .bv-pop { animation: bv-in var(--cds-dur-slow) var(--cds-ease-out) both; }
+    @keyframes bv-in { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
+  }
+</style>
+
+<div class="bv">
+  <header class="bv-head" id="synthese">
+    <h1>Campagne 2026 : les hausses fournisseurs sont-elles justifiées ?</h1>
+    <p>Les fournisseurs demandent <b data-draw="t-dem" data-source="campagnes" data-field="hausse_demandee" data-where="campagne=2026">—</b> quand l'évolution réelle des matières (indices INSEE) n'en justifie que <b data-draw="t-jus" data-source="campagnes" data-field="hausse_justifiee" data-where="campagne=2026">—</b>. L'écart représente <b data-draw="t-eur" data-source="campagnes" data-field="eur_renegociables" data-where="campagne=2026">—</b> à renégocier, dont <b data-draw="t-top" data-source="fournisseurs_2026" data-field="eur_renegociables" data-row="0">—</b> chez <b data-draw="t-topn" data-source="fournisseurs_2026" data-field="fournisseur" data-row="0">—</b>.</p>
+  </header>
+
+  <section class="bv-kpis" aria-label="Chiffres clés">
+    <div class="bv-kpi is-key"><span>€ renégociables · campagne 2026</span><strong data-draw="k-eur" data-source="campagnes" data-field="eur_renegociables" data-where="campagne=2026">—</strong><small>2025 : <span data-draw="k-eur25" data-source="campagnes" data-field="eur_renegociables" data-where="campagne=2025">—</span></small></div>
+    <div class="bv-kpi"><span>Hausse demandée</span><strong data-draw="k-dem" data-source="campagnes" data-field="hausse_demandee" data-where="campagne=2026">—</strong><small>pondérée par les volumes 2025</small></div>
+    <div class="bv-kpi"><span>Hausse justifiée par les matières</span><strong data-draw="k-jus" data-source="campagnes" data-field="hausse_justifiee" data-where="campagne=2026">—</strong><small>moyenne 6 mois avant la campagne</small></div>
+    <div class="bv-kpi"><span>Écart</span><strong data-draw="k-ecart" data-source="campagnes" data-field="ecart_pts" data-where="campagne=2026">—</strong><small>demandée − justifiée, en points</small></div>
+    <div class="bv-kpi"><span>Déjà justifié pour 2027</span><strong data-draw="k-2027" data-source="campagnes" data-field="plafond_prochaine" data-where="campagne=2026">—</strong><small>indices à fin septembre 2026</small></div>
+  </section>
+
+  <section class="bv-grid">
+    <article class="bv-card" id="nuage">
+      <h2>Demandé × justifié, fournisseur par fournisseur</h2>
+      <p>Sur la diagonale, la hausse demandée colle aux matières. Plus un point est au-dessus, plus la hausse est contestable. La bande grise marque la tolérance de ±1 point. Taille du point : valeur achetée.</p>
+      <div class="bv-chart" data-draw="scatter" data-source="fournisseurs_2026"></div>
+      <div class="bv-legend"><span><i class="bv-dot-bad"></i>À renégocier (&gt; 3 pts)</span><span><i class="bv-dot-warn"></i>À surveiller (&gt; 1 pt)</span><span><i class="bv-dot-ok"></i>Conforme</span></div>
+    </article>
+
+    <article class="bv-card" id="matieres">
+      <h2>Ce qui bouge sur les matières</h2>
+      <p>Variation sur la fenêtre de la campagne 2026, signal sur les 3 derniers mois et variation déjà acquise pour 2027. Une baisse est un levier : convoquer le commercial avant la campagne.</p>
+      <div class="bv-wrap">
+        <table data-source="matieres" data-row-key="matiere">
+          <thead><tr><th data-field="matiere">Matière</th><th data-field="signal">Signal 3 mois</th><th class="num" data-field="variation_campagne">Campagne 2026</th><th class="num" data-field="variation_12m">12 mois</th><th class="num" data-field="acquis_prochaine">Acquis 2027</th></tr></thead>
+          <tbody data-draw="mat"></tbody>
+        </table>
+      </div>
+    </article>
+  </section>
+
+  <article class="bv-card" id="fournisseurs">
+    <h2>Classement des fournisseurs à renégocier</h2>
+    <p>Un commentaire par fournisseur, rédigé à partir des mêmes chiffres, à reprendre tel quel dans la note de négociation.</p>
+    <div class="bv-wrap">
+      <table data-source="fournisseurs_2026" data-row-key="fournisseur">
+        <thead><tr><th data-field="fournisseur">Fournisseur</th><th data-field="statut">Statut</th><th class="num" data-field="hausse_demandee">Demandée</th><th class="num" data-field="hausse_justifiee">Justifiée</th><th class="num" data-field="ecart_pts">Écart</th><th class="num" data-field="eur_renegociables">€ renégociables</th><th data-source="commentaires" data-field="commentaire">Argument de négociation</th></tr></thead>
+        <tbody data-draw="four"></tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="bv-card" id="controle">
+    <h2>Contrôle croisé avec Power BI</h2>
+    <p>Les 5 chiffres clés recalculés ici en Python à partir des mêmes CSV, comparés aux mesures DAX relevées dans le modèle Power BI. Écart nul attendu : c'est la preuve que les deux outils appliquent la même définition.</p>
+    <div class="bv-wrap">
+      <table data-source="controle" data-row-key="indicateur">
+        <thead><tr><th data-field="libelle">Indicateur</th><th class="num" data-field="claude">Tableau de bord Claude</th><th class="num" data-field="powerbi">Power BI (DAX)</th><th class="num" data-field="ecart">Écart</th><th data-field="verdict">Résultat</th></tr></thead>
+        <tbody data-draw="ctrl"></tbody>
+      </table>
+    </div>
+  </article>
+</div>
+
+<script>
+  const L = d3.formatLocale({ decimal: ',', thousands: ' ', grouping: [3], currency: ['', ' €'] });
+  const pct = (v) => L.format('+.1%')(v).replace('%', ' %');
+  const eur = (v) => L.format('$,.0f')(v);
+  const keur = (v) => L.format(',.0f')(v / 1000) + ' k€';
+  const pts = (v) => L.format('+.1f')(v) + ' pts';
+  window.bvFmt = { pct, eur, keur, pts };
+  window.bvStatut = { 'À renégocier': 'bad', 'À surveiller': 'warn', 'Conforme': 'ok' };
+
+  const rowsOf = (id) => { const d = dash.data(id); return d.status === 'ok' ? d.data : null; };
+  const num = (v) => Number(v);
+  const one = (name, id, pick, fmt) => dash.draw(name, (el) => {
+    const r = rowsOf(id);
+    const row = r && pick(r);
+    el.textContent = row == null || row === '' ? '—' : fmt(row);
+  });
+  const camp = (c, f) => (r) => { const x = r.find((d) => String(d.campagne) === c); return x ? num(x[f]) : null; };
+
+  one('t-dem', 'campagnes', camp('2026', 'hausse_demandee'), pct);
+  one('t-jus', 'campagnes', camp('2026', 'hausse_justifiee'), pct);
+  one('t-eur', 'campagnes', camp('2026', 'eur_renegociables'), keur);
+  one('t-top', 'fournisseurs_2026', (r) => r[0] && num(r[0].eur_renegociables), keur);
+  one('t-topn', 'fournisseurs_2026', (r) => r[0] && r[0].fournisseur, (v) => v);
+  one('k-eur', 'campagnes', camp('2026', 'eur_renegociables'), eur);
+  one('k-eur25', 'campagnes', camp('2025', 'eur_renegociables'), eur);
+  one('k-dem', 'campagnes', camp('2026', 'hausse_demandee'), pct);
+  one('k-jus', 'campagnes', camp('2026', 'hausse_justifiee'), pct);
+  one('k-ecart', 'campagnes', camp('2026', 'ecart_pts'), pts);
+  one('k-2027', 'campagnes', camp('2026', 'plafond_prochaine'), pct);
+</script>
+
+<script>
+  dash.calc('commentaires', {
+    title: 'Argument par fournisseur',
+    description: 'Phrase de négociation écrite à partir des colonnes du fournisseur.',
+    inputs: ['fournisseurs_2026'],
+    fn: (fournisseurs_2026) => fournisseurs_2026.map((f) => {
+      const p = (v) => (v >= 0 ? '+' : '−') + Math.abs(v * 100).toFixed(1).replace('.', ',') + ' %';
+      const e = Number(f.ecart_pts), eu = Math.round(Number(f.eur_renegociables));
+      const k = Math.round(eu / 1000);
+      let t = 'Demande ' + p(Number(f.hausse_demandee)) + ' pour ' + p(Number(f.hausse_justifiee)) + ' justifiés par ses matières.';
+      if (e > 1) t += ' Écart de ' + e.toFixed(1).replace('.', ',') + ' pts, soit ' + (k > 0 ? k + ' k€' : eu + ' €') + ' à renégocier.';
+      else t += ' Hausse conforme : à accepter.';
+      if (Number(f.levier_variation) < 0) t += ' Levier : ' + f.levier_matiere.toLowerCase() + ' ' + p(Number(f.levier_variation)) + ' sur 6 mois.';
+      if (Number(f.effet_cliquet) > 0) t += ' Effet cliquet sur ' + f.effet_cliquet + ' campagne(s) : exiger la répercussion des baisses.';
+      return { fournisseur: f.fournisseur, commentaire: t };
+    }),
+  });
+
+  dash.calc('controle', {
+    title: 'Contrôle croisé Claude / Power BI',
+    description: 'Chaque chiffre clé recalculé ici, face à la valeur DAX relevée dans Power BI.',
+    inputs: ['controle_powerbi', 'campagnes', 'fournisseurs_2026'],
+    fn: (controle_powerbi, campagnes, fournisseurs_2026) => {
+      const c26 = campagnes.find((c) => String(c.campagne) === '2026') || {};
+      const orl = fournisseurs_2026.find((f) => f.fournisseur === 'Orlenza Thermique') || {};
+      const claude = {
+        hausse_demandee_2026: Number(c26.hausse_demandee),
+        hausse_justifiee_2026: Number(c26.hausse_justifiee),
+        eur_renegociables_2026: Number(c26.eur_renegociables),
+        eur_orlenza_2026: Number(orl.eur_renegociables),
+        plafond_2027: Number(c26.plafond_prochaine),
+      };
+      const libelles = {
+        hausse_demandee_2026: 'Hausse demandée 2026', hausse_justifiee_2026: 'Hausse justifiée 2026',
+        eur_renegociables_2026: '€ renégociables 2026', eur_orlenza_2026: '€ renégociables Orlenza Thermique',
+        plafond_2027: 'Hausse déjà justifiée pour 2027',
+      };
+      return controle_powerbi.map((r) => {
+        const pb = Number(r.valeur_powerbi), cl = claude[r.indicateur];
+        const ecart = cl - pb;
+        const tol = r.indicateur.startsWith('eur') ? 0.5 : 0.00001;
+        return { indicateur: r.indicateur, libelle: libelles[r.indicateur] || r.indicateur, claude: cl, powerbi: pb,
+                 ecart, verdict: Math.abs(ecart) <= tol ? 'Identique' : 'Différent' };
+      });
+    },
+  });
+</script>
+
+<script>
+  const F = window.bvFmt;
+  const cssVar = (n) => getComputedStyle(document.getElementById('dash-root')).getPropertyValue(n).trim();
+  const couleur = (s) => cssVar({ bad: '--color-bad', warn: '--color-warn', ok: '--color-ok' }[window.bvStatut[s]] || '--cds-chart-muted');
+  document.querySelectorAll('.bv-dot-bad').forEach((e) => { e.style.background = cssVar('--color-bad'); });
+  document.querySelectorAll('.bv-dot-warn').forEach((e) => { e.style.background = cssVar('--color-warn'); });
+  document.querySelectorAll('.bv-dot-ok').forEach((e) => { e.style.background = cssVar('--color-ok'); });
+  let animer = true;
+
+  dash.draw('scatter', (el) => {
+    const d = dash.data('fournisseurs_2026');
+    if (d.status !== 'ok') { el.textContent = '—'; return; }
+    const rows = d.data.map((r) => ({ ...r, x: +r.hausse_justifiee, y: +r.hausse_demandee, v: +r.valeur_n }));
+    el.replaceChildren();
+    const W = Math.max(el.clientWidth, 280), H = 380, m = { t: 12, r: 16, b: 40, l: 52 };
+    const ext = d3.extent(rows.flatMap((r) => [r.x, r.y]));
+    const pad = (ext[1] - ext[0]) * 0.08;
+    const dom = [ext[0] - pad, ext[1] + pad];
+    const x = d3.scaleLinear(dom, [m.l, W - m.r]), y = d3.scaleLinear(dom, [H - m.b, m.t]);
+    const r = d3.scaleSqrt(d3.extent(rows, (q) => q.v), [5, 18]);
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img')
+      .attr('aria-label', 'Nuage hausse demandée selon hausse justifiée');
+    const tick = (v) => (v * 100).toFixed(0) + ' %';
+    svg.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(5).tickFormat(tick))
+      .attr('font-size', null).attr('font-family', null).call((g) => { g.select('.domain').attr('stroke', 'var(--cds-chart-axis)'); g.selectAll('text').attr('fill', 'var(--color-fg-muted)'); g.selectAll('line').attr('stroke', 'var(--cds-chart-axis)'); });
+    svg.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5).tickSize(-(W - m.l - m.r)).tickFormat(tick))
+      .attr('font-size', null).attr('font-family', null).call((g) => { g.select('.domain').remove(); g.selectAll('line').attr('stroke', 'var(--cds-chart-grid)'); g.selectAll('text').attr('fill', 'var(--color-fg-muted)'); });
+    const tol = 0.01;
+    svg.append('path').attr('fill', 'var(--cds-chart-muted)').attr('opacity', 0.15)
+      .attr('d', `M${x(dom[0])},${y(dom[0] + tol)}L${x(dom[1] - tol)},${y(dom[1])}L${x(dom[1])},${y(dom[1])}L${x(dom[1])},${y(dom[1] - tol)}L${x(dom[0] + tol)},${y(dom[0])}L${x(dom[0])},${y(dom[0])}Z`);
+    svg.append('line').attr('x1', x(dom[0])).attr('y1', y(dom[0])).attr('x2', x(dom[1])).attr('y2', y(dom[1]))
+      .attr('stroke', 'var(--cds-chart-reference)').attr('stroke-dasharray', '4 4');
+    svg.append('text').attr('x', W - m.r).attr('y', H - 6).attr('text-anchor', 'end').attr('fill', 'var(--color-fg-muted)')
+      .attr('font-size', 'var(--cds-font-size-caption)').text('Hausse justifiée par les matières →');
+    svg.append('text').attr('x', m.l).attr('y', m.t + 4).attr('dx', 6).attr('fill', 'var(--color-fg-muted)')
+      .attr('font-size', 'var(--cds-font-size-caption)').text('↑ Hausse demandée');
+    const tip = d3.select(el).append('div').attr('class', 'bv-tip').style('opacity', 0);
+    const pts = svg.append('g').selectAll('g').data(rows.sort((a, b) => b.v - a.v)).join('g')
+      .attr('transform', (q) => `translate(${x(q.x)},${y(q.y)})`);
+    pts.append('circle').attr('class', animer ? 'bv-pop' : null).style('animation-delay', (_, i) => `${i * 40}ms`)
+      .attr('r', (q) => r(q.v)).attr('fill', (q) => couleur(q.statut)).attr('fill-opacity', 0.75)
+      .attr('stroke', 'var(--color-panel)').attr('stroke-width', 2);
+    pts.filter((q) => q.ecart_pts > 1 || q.y > dom[1] - (dom[1] - dom[0]) * 0.3).append('text')
+      .attr('x', (q) => r(q.v) + 4).attr('dy', '0.32em').attr('fill', 'var(--color-fg)').attr('font-size', 'var(--cds-font-size-caption)')
+      .text((q) => q.fournisseur);
+    pts.on('pointerenter pointermove', (ev, q) => {
+      const [px, py] = d3.pointer(ev, el);
+      tip.replaceChildren();
+      tip.append('b').text(q.fournisseur);
+      tip.append('div').text(`Demandée ${F.pct(q.y)} · justifiée ${F.pct(q.x)}`);
+      tip.append('div').text(`Écart ${F.pts(+q.ecart_pts)} · ${F.eur(+q.eur_renegociables)} à renégocier`);
+      const w = tip.node().offsetWidth;
+      tip.style('left', `${Math.min(Math.max(px + 12, 0), el.clientWidth - w - 4)}px`).style('top', `${Math.max(py - 56, 0)}px`).style('opacity', 1);
+    }).on('pointerleave', () => tip.style('opacity', 0));
+    animer = false;
+  });
+
+  const cellule = (tr, txt, cls) => { const td = tr.insertCell(); td.textContent = txt; if (cls) td.className = cls; return td; };
+  const pill = (td, s) => { const sp = document.createElement('span'); sp.className = 'bv-pill bv-' + (window.bvStatut[s] || 'ok'); sp.textContent = s; td.replaceChildren(sp); };
+
+  dash.draw('four', (tb) => {
+    const d = dash.data('fournisseurs_2026'), c = dash.data('commentaires');
+    tb.replaceChildren();
+    if (d.status !== 'ok') return;
+    const com = new Map((c.status === 'ok' ? c.data : []).map((x) => [x.fournisseur, x.commentaire]));
+    d.data.forEach((f) => {
+      const tr = tb.insertRow();
+      cellule(tr, f.fournisseur);
+      pill(tr.insertCell(), f.statut);
+      cellule(tr, F.pct(+f.hausse_demandee), 'num');
+      cellule(tr, F.pct(+f.hausse_justifiee), 'num');
+      cellule(tr, F.pts(+f.ecart_pts), 'num');
+      cellule(tr, F.eur(+f.eur_renegociables), 'num');
+      cellule(tr, com.get(f.fournisseur) || '', 'txt');
+    });
+  });
+
+  const signal = { 'Hausse : à anticiper': 'bad', 'Baisse : convoquer le commercial': 'ok', 'Stable': 'warn' };
+  dash.draw('mat', (tb) => {
+    const d = dash.data('matieres');
+    tb.replaceChildren();
+    if (d.status !== 'ok') return;
+    [...d.data].sort((a, b) => b.variation_3m - a.variation_3m).forEach((mt) => {
+      const tr = tb.insertRow();
+      cellule(tr, mt.matiere);
+      const td = tr.insertCell();
+      const sp = document.createElement('span');
+      sp.className = 'bv-pill bv-' + (signal[mt.signal] || 'warn');
+      sp.textContent = (mt.signal.startsWith('Hausse') ? '▲ ' : mt.signal.startsWith('Baisse') ? '▼ ' : '● ') + mt.signal;
+      td.replaceChildren(sp);
+      cellule(tr, F.pct(+mt.variation_campagne), 'num');
+      cellule(tr, F.pct(+mt.variation_12m), 'num');
+      cellule(tr, F.pct(+mt.acquis_prochaine), 'num');
+    });
+  });
+
+  dash.draw('ctrl', (tb) => {
+    const d = dash.data('controle');
+    tb.replaceChildren();
+    if (d.status !== 'ok') return;
+    d.data.forEach((k) => {
+      const tr = tb.insertRow();
+      tr.dataset.key = k.indicateur;
+      const f = k.indicateur.startsWith('eur') ? (v) => F.eur(v) : (v) => F.pct(v);
+      cellule(tr, k.libelle);
+      cellule(tr, f(k.claude), 'num');
+      cellule(tr, f(k.powerbi), 'num');
+      cellule(tr, k.indicateur.startsWith('eur') ? F.eur(k.ecart) : (k.ecart * 100).toFixed(4).replace('.', ',') + ' pt', 'num');
+      cellule(tr, (k.verdict === 'Identique' ? '✓ ' : '✗ ') + k.verdict, 'bv-check ' + (k.verdict === 'Identique' ? 'bv-ok' : 'bv-bad'));
+    });
+  });
+</script>

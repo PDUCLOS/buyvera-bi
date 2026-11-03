@@ -1,0 +1,13 @@
+fournisseur,univers,statut,valeur_n,hausse_demandee,hausse_justifiee,ecart_pts,eur_renegociables,effet_cliquet,levier_matiere,levier_variation,plafond_prochaine,nb_articles
+Orlenza Thermique,CVC,À renégocier,2127755.48,0.061745,0.005156,5.658936,120408.329419,0,Plastiques (naphta),-0.219435,0.120072,111.0
+Cuprana,CVC,À renégocier,910874.22,0.104645,0.033067,7.157796,65198.514621,1,Plastiques (naphta),-0.219435,0.227599,270.0
+Kelmaro Antriebe,Transmission,À renégocier,1183245.5,0.007108,-0.032885,3.999251,47320.962092,1,Plastiques (naphta),-0.219435,0.047403,228.0
+Vandrelo,Transmission,À renégocier,765535.17,0.038168,0.000539,3.762844,28805.894335,1,Acier / métaux ferreux,-0.056954,0.087059,77.0
+Halderis,Transmission,À surveiller,1549933.25,-0.001621,-0.015924,1.430248,22215.459632,0,Acier / métaux ferreux,-0.056954,0.052064,74.0
+Sorvane,CVC / Transmission,À surveiller,1197930.37,-0.022963,-0.036631,1.366855,16496.882575,0,Plastiques (naphta),-0.219435,0.107675,230.0
+Zentrix Technik,Transmission,Conforme,1243225.41,0.001034,-0.005309,0.634362,10805.442385,2,Acier / métaux ferreux,-0.056954,0.081266,149.0
+Aerivo Klima,CVC,Conforme,2680991.1,0.016596,0.016381,0.021491,9075.637876,1,Plastiques (naphta),-0.219435,0.167935,317.0
+Brunelle Aéraulique,CVC,Conforme,2309599.29,-0.003149,-0.002826,-0.032335,6700.958784,0,Plastiques (naphta),-0.219435,0.115445,156.0
+Mekandra,Transmission,Conforme,936176.34,0.003058,0.000943,0.211572,3921.377771,0,Acier / métaux ferreux,-0.056954,0.099591,94.0
+Rotavel,Transmission,Conforme,1045944.75,-0.032357,-0.031457,-0.090041,3170.072989,0,Plastiques (naphta),-0.219435,0.048391,261.0
+Tressile,Transmission,Conforme,579093.62,-0.069662,-0.067628,-0.203471,1058.098803,0,Plastiques (naphta),-0.219435,0.146924,129.0
