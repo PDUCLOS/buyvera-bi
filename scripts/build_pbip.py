@@ -1239,6 +1239,9 @@ def section_config(i: int, nom: str, visuels=None) -> tuple[str, str]:
         # Avec le texte "Drillthrough", Desktop ignore la liaison et le menu « Extraire » n'apparaît pas.
         cfg["pageBinding"] = {"name": f"Liaison{i}", "type": 1,
                               "parameters": [{"name": f"Param{i}", "boundFilter": f"Extraction{i}", "fieldExpr": champ}]}
+    # garde-fou : report.json veut des énumérations numériques, un texte serait ignoré en silence par Desktop
+    assert all(isinstance(f["howCreated"], int) for f in filtres), "howCreated doit être numérique"
+    assert isinstance(cfg.get("pageBinding", {}).get("type", 0), int), "pageBinding.type doit être numérique (1 = extraction)"
     return json.dumps(cfg, ensure_ascii=False), json.dumps(filtres, ensure_ascii=False)
 
 THEME = {

@@ -40,5 +40,11 @@ Toujours relancer les contrôles après une modification des scripts. Le rapport
 - `VAR` partout, `DIVIDE` au lieu de `/`, dossier d'affichage par thème, description (FR) sur chaque mesure, table et colonne.
 - Format PBIP + TMDL, versionné Git. Commit avant chaque série de modifications du modèle.
 
+## Power BI Desktop : règles apprises
+- `report.json` (ancien format) : énumérations **numériques** (`pageBinding.type` 1 = extraction, `howCreated` 5, `displayOption` 1). Un texte est ignoré sans message d'erreur.
+- Une fonctionnalité interactive (extraction, synchro des segments, boutons) n'est annoncée dans le README, le portfolio ou la vidéo qu'après un test dans Desktop.
+- Ne jamais enregistrer (Ctrl+S) le projet dans Desktop : il propose de passer en PBIR (irréversible, casse le générateur). Si le dialogue apparaît : « Ne pas mettre à niveau ».
+- Pour connaître le format attendu : convertir une copie jetable en PBIR et lire `definition/pages/*/page.json`.
+
 ## Style
 - Code et commentaires en français, noms de colonnes en snake_case.
