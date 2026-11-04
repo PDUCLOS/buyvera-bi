@@ -1,0 +1,12 @@
+// 80/20 Orlenza Thermique, campagne 2026 : attendu ≈ 36 références pour 80 %, ≈ 67 % sur 20 % des références
+EVALUATE
+CALCULATETABLE (
+    ROW (
+        "renego", [€ renégociables],
+        "refs", [Nb références comparables],
+        "refs80", [Références pour 80 % de l'enjeu],
+        "part20", [Part de l'enjeu sur 20 % des références]
+    ),
+    param_campagne[campagne] = 2026,
+    dim_fournisseur[nom] = "Orlenza Thermique"
+)

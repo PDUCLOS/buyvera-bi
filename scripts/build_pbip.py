@@ -392,6 +392,36 @@ RETURN
      PANIER_JUSTIFIE + """
 RETURN
     SUMX ( _panierJ, MAX ( 0, DIVIDE ( [@pN1], [@pN] ) - 1 - [@j] ) * [@pN] * [@vN] )"""),
+    ("Part cumulée de l'enjeu %", "13. 80/20", "0%",
+     "Part des € renégociables portée par cette référence et toutes celles qui pèsent plus (courbe de Pareto).",
+     """VAR _cur = [€ renégociables]
+VAR _refs = ADDCOLUMNS ( ALLSELECTED ( dim_article[designation] ), "@e", [€ renégociables] )
+VAR _tot = SUMX ( _refs, [@e] )
+VAR _cum = SUMX ( FILTER ( _refs, [@e] >= _cur ), [@e] )
+RETURN
+    IF ( _cur > 0, DIVIDE ( _cum, _tot ) )"""),
+    ("Priorité 80/20", "13. 80/20", "",
+     "« À négocier en priorité » pour les références qui font 80 % de l'enjeu, sinon « Ensuite ».",
+     """VAR _cur = [€ renégociables]
+VAR _refs = ADDCOLUMNS ( ALLSELECTED ( dim_article[designation] ), "@e", [€ renégociables] )
+VAR _tot = SUMX ( _refs, [@e] )
+VAR _avant = SUMX ( FILTER ( _refs, [@e] > _cur ), [@e] )
+RETURN
+    IF ( _cur > 0, IF ( DIVIDE ( _avant, _tot ) < 0.8, "▲ À négocier en priorité", "Ensuite" ) )"""),
+    ("Références pour 80 % de l'enjeu", "13. 80/20", "#,0",
+     "Nombre de références qui portent 80 % des € renégociables : celles à mettre sur la table en premier.",
+     """VAR _refs = FILTER ( ADDCOLUMNS ( VALUES ( dim_article[designation] ), "@e", [€ renégociables] ), [@e] > 0 )
+VAR _tot = SUMX ( _refs, [@e] )
+RETURN
+    COUNTROWS ( FILTER ( _refs, SUMX ( FILTER ( _refs, [@e] > EARLIER ( [@e] ) ), [@e] ) < 0.8 * _tot ) )"""),
+    ("Part de l'enjeu sur 20 % des références", "13. 80/20", "0%",
+     "Part des € renégociables portée par les 20 % de références comparables qui pèsent le plus.",
+     """VAR _refs = FILTER ( ADDCOLUMNS ( VALUES ( dim_article[designation] ), "@e", [€ renégociables] ), NOT ISBLANK ( [@e] ) )
+VAR _k = ROUNDUP ( COUNTROWS ( _refs ) * 0.2, 0 )
+RETURN
+    DIVIDE ( SUMX ( TOPN ( _k, _refs, [@e], DESC ), [@e] ), SUMX ( _refs, [@e] ) )"""),
+    ("Nb références comparables", "13. 80/20", "#,0", "Références présentes aux deux campagnes, comptées par désignation.",
+     """COUNTROWS ( FILTER ( ADDCOLUMNS ( VALUES ( dim_article[designation] ), "@e", [€ renégociables] ), NOT ISBLANK ( [@e] ) ) )"""),
     ("Nb articles comparables", "1. Hausses", "#,0", "Articles du panier comparable N / N+1.",
      PANIER + "\nRETURN\n    COUNTROWS ( _panier )"),
     ("Effet cliquet", "1. Hausses", "0",
@@ -1174,12 +1204,34 @@ PAGES = [
                            m("Demandée (ligne) %"): "Demandée", m("Justifiée (ligne) %"): "Justifiée", m("€ lignes anormales"): "Écart €"}},
           filtres=[(("c", "ml_anomalies_tarif", "anomalie"), [True])]),
     ]),
+    ("Références 80/20", entete(
+        "Références 80/20 : par où commencer la négociation",
+        "Les quelques références qui portent l'essentiel de l'enjeu. Les mettre sur la table en premier, le reste suivra.") + [
+        segment(FOURN, 20, 80, w=300, titre="Fournisseur", unique=True),
+        segment(CAMPAGNE, 340, 80, titre="Campagne (N+1)"),
+        retour(),
+        tuile(20, 150, 300, 96, "€ renégociables", "€ renégociables chez ce fournisseur", cle=True),
+        tuile(335, 150, 300, 96, "Nb références comparables", "Références comparables"),
+        tuile(650, 150, 300, 96, "Références pour 80 % de l'enjeu", "Références pour 80 % de l'enjeu"),
+        tuile(965, 150, 295, 96, "Part de l'enjeu sur 20 % des références", "Enjeu porté par 20 % des références"),
+        v("clusteredBarChart", 20, 262, 520, 438,
+          {"Category": [("c", "dim_article", "designation")], "Y": [m("€ renégociables")]},
+          titre="Les références qui pèsent le plus (€ renégociables)", ordre=(m("€ renégociables"), 2), objets={"labels": True}),
+        v("tableEx", 560, 262, 700, 438,
+          {"Values": [("c", "dim_article", "designation"), m("€ renégociables"), m("Part cumulée de l'enjeu %"), m("Priorité 80/20")]},
+          titre="Ordre de négociation · clic droit → Extraire → Détail article", ordre=(m("€ renégociables"), 2),
+          objets={"noms": {("c", "dim_article", "designation"): "Référence", m("€ renégociables"): "€ renégociables",
+                           m("Part cumulée de l'enjeu %"): "Cumul", m("Priorité 80/20"): "Priorité"},
+                  "largeurs": {("c", "dim_article", "designation"): 330, m("€ renégociables"): 110,
+                               m("Part cumulée de l'enjeu %"): 70, m("Priorité 80/20"): 170}}),
+    ]),
     ("Fiche négociation", entete(
         "Fiche négociation",
         "Tout pour préparer le rendez-vous : chiffres, argument matière, historique et contre-proposition chiffrée.") + [
         segment(FOURN, 20, 80, w=300, titre="Fournisseur", unique=True),
         segment(CAMPAGNE, 340, 80, titre="Campagne (N+1)"),
         segment(("c", "param_hausse", "hausse_acceptee"), 600, 80, w=260, titre="Simulateur : hausse acceptée (%)"),
+        bouton("▤  Références 80/20", "Références 80/20", 880, 92, w=170),
         retour(),
         v("card", 20, 150, 240, 96, {"Values": [m("Statut fournisseur")]}, titre="Statut campagne", objets={"police": 14}),
         v("card", 270, 150, 240, 96, {"Values": [m("Hausse demandée %")]}, titre="Hausse demandée"),
@@ -1213,12 +1265,14 @@ PAGES = [
 LARGEUR_NAV = 200
 # Ordre de navigation : le parcours de négociation, puis les pages de détail
 ORDRE = ["Parcours négociation", "Synthèse campagne", "Alertes matières", "Fournisseurs", "Fiche négociation",
-         "Prix & volumes", "Prix payés", "Prévisions", "Gains", "Détail article", "Matières", "Rattachement"]
+         "Références 80/20", "Prix & volumes", "Prix payés", "Prévisions", "Gains", "Détail article", "Matières", "Rattachement"]
 PAGES.sort(key=lambda p: ORDRE.index(p[0]))
-ICONES = ["➜", "◉", "⚑", "◎", "✎", "€", "▦", "◷", "✓", "▤", "≋", "⇄"]
+ICONES = ["➜", "◉", "⚑", "◎", "✎", "▥", "€", "▦", "◷", "✓", "▤", "≋", "⇄"]
 COURT = {"Parcours négociation": "Parcours"}  # libellés de navigation raccourcis
 # Pages cibles d'extraction (clic droit → Extraire) : champ transmis
-EXTRACTION = {"Fiche négociation": ("dim_fournisseur", "nom"), "Détail article": ("dim_article", "designation")}
+EXTRACTION = {"Fiche négociation": ("dim_fournisseur", "nom"), "Références 80/20": ("dim_fournisseur", "nom"),
+              "Détail article": ("dim_article", "designation")}
+PAGES_ANNEXES = {"Détail article", "Références 80/20"}  # hors bandeau : ouvertes par bouton ou extraction
 
 
 def section_config(i: int, nom: str, visuels=None) -> tuple[str, str]:
@@ -1702,7 +1756,7 @@ def construire(dossier_donnees: str) -> None:
     # Rapport : format report.json
     sections = [{
         "config": section_config(i, p, visuels)[0], "displayName": p, "displayOption": 1, "filters": section_config(i, p)[1],
-        **({"visibility": 1} if p == "Détail article" else {}),
+        **({"visibility": 1} if p in PAGES_ANNEXES else {}),
         "height": 720.0 + HAUT, "name": f"ReportSection{i:02d}", "ordinal": i,
         "visualContainers": [visuel(i, j, d) for j, d in
                              enumerate(barre_navigation(i) + [recaler(x) for x in visuels])],

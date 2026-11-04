@@ -189,12 +189,75 @@ def s_logo(img, t, d):
           F_TEXTE(30), GRIS, apparition(t, 1.6), "mm")
 
 
+def pareto_orlenza() -> list[float]:
+    """€ renégociables 2026 d'Orlenza Thermique par référence (désignation), triés : données réelles du projet."""
+    import pandas as pd
+    p = RACINE / "data" / "processed"
+    f = pd.read_csv(p / "fact_hausse_article.csv")
+    f = f[(f.fenetre == 6) & (f.decalage == 0) & f.comparable & (f.campagne == 2026)]
+    a = pd.read_csv(p / "dim_article.csv")[["article_id", "fournisseur_id", "designation"]]
+    n = pd.read_csv(p / "dim_fournisseur.csv")[["fournisseur_id", "nom"]]
+    f = f.merge(a, on="article_id").merge(n, on="fournisseur_id")
+    f = f[f.nom == "Orlenza Thermique"]
+    f["e"] = (f.prix_n1 / f.prix_n - 1 - f.hausse_justifiee).clip(lower=0) * f.prix_n * f.volume_n
+    return f.groupby("designation").e.sum().sort_values(ascending=False).tolist()
+
+
+PARETO = pareto_orlenza()
+
+
 def s_synthese(img, t, d):
-    capture(img, "01_synthese_campagne.png", t, d, 760, 180, 1080, focus=(0.6, 0.3))
-    texte(img, (90, 170), "Campagne 2026", F_TITRE(44), BLANC, apparition(t, 0.2))
-    compteur(img, (90, 260), 1.2, pct, t, 0.6, "hausse demandée", AMBRE)
-    compteur(img, (90, 480), -0.6, pct, t, 1.6, "justifiée par les matières", VERT)
-    compteur(img, (90, 700), 335, lambda v: f"{v:,.0f} k€".replace(",", " "), t, 2.8, "à renégocier", ROUGE)
+    """La hausse réelle : le pourcentage de la lettre appliqué aux références et aux volumes de l'acheteur."""
+    texte(img, (90, 150), "Orlenza Thermique · campagne 2026", F_TITRE(46), BLANC, apparition(t, 0.1))
+    etapes = [(0.6, "+6,2 %", "annoncés dans la lettre", AMBRE),
+              (1.8, f"{len(PARETO)} références", "achetées chez lui en 2025", BLANC),
+              (3.0, "+131 k€ / an", "la hausse réelle, sur tes volumes", ROUGE),
+              (4.2, "+0,5 %", "seulement justifiés par ses matières", VERT)]
+    for i, (deb, gros, petit, c) in enumerate(etapes):
+        a = apparition(t, deb)
+        x = 90 + i * 445
+        calque = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        ImageDraw.Draw(calque).rounded_rectangle([x, 300 + (1 - a) * 30, x + 410, 620 + (1 - a) * 30], radius=22,
+                                                fill=NAVY2 + (int(255 * a),), outline=c + (int(200 * a),), width=3)
+        img.alpha_composite(calque)
+        texte(img, (x + 205, 430), gros, F_CHIFFRE(54), c, a, "mm")
+        texte(img, (x + 205, 540), petit, F_TEXTE(25), GRIS, a, "mm")
+        if i < 3:
+            texte(img, (x + 427, 460), "→", F_SYMB(40), GRIS, apparition(t, deb + 0.6), "mm")
+    compteur(img, (90, 700), 120, lambda v: f"{v:,.0f} k€".replace(",", " "), t, 4.9, "à renégocier chez Orlenza", ROUGE)
+    texte(img, (1000, 760), "Sur toute la campagne : 335 k€", F_TEXTE(34), GRIS, apparition(t, 6.2))
+
+
+def s_pareto(img, t, d):
+    """80/20 : les quelques références qui portent l'enjeu, à négocier en premier."""
+    texte(img, (90, 150), "80/20 : par où commencer", F_TITRE(56), BLANC, apparition(t, 0.1))
+    tot = sum(PARETO)
+    n80 = next(i + 1 for i in range(len(PARETO)) if sum(PARETO[:i + 1]) >= 0.8 * tot)
+    x0, y0, larg, haut = 90, 900, 1100, 560
+    bw = larg / len(PARETO)
+    calque = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    dr = ImageDraw.Draw(calque)
+    cum, pts = 0.0, []
+    for i, e in enumerate(PARETO):
+        a = apparition(t, 0.6 + i * 0.012, 0.4)
+        h = haut * e / PARETO[0] * a
+        c = (ROUGE if i < n80 else GRIS)
+        dr.rectangle([x0 + i * bw, y0 - h, x0 + (i + 1) * bw - 1, y0], fill=c + (int(255 * a),))
+        cum += e
+        pts.append((x0 + (i + 0.5) * bw, y0 - haut * cum / tot))
+    k = max(2, int(len(pts) * min(1.0, max(0.0, (t - 1.8) / 1.6))))
+    dr.line(pts[:k], fill=MENTHE + (255,), width=5)
+    xs = x0 + n80 * bw
+    if t > 3.4:
+        dr.line([(xs, y0 - haut - 20), (xs, y0)], fill=BLANC + (180,), width=2)
+    img.alpha_composite(calque)
+    texte(img, (x0 + larg - 10, y0 - haut - 30), "cumul de l'enjeu", F_TEXTE(26), MENTHE, apparition(t, 2.2), "rs")
+    texte(img, (1290, 330), f"{n80} références", F_CHIFFRE(84), ROUGE, apparition(t, 3.4))
+    texte(img, (1290, 440), f"sur {len(PARETO)} portent 80 %", F_TEXTE(38), BLANC, apparition(t, 3.6))
+    texte(img, (1290, 490), "des 120 k€ à renégocier", F_TEXTE(38), BLANC, apparition(t, 3.7))
+    texte(img, (1290, 620), "20 % des références", F_TITRE(40), AMBRE, apparition(t, 4.6))
+    texte(img, (1290, 672), "= 68 % de l'enjeu", F_TEXTE(38), AMBRE, apparition(t, 4.7))
+    pastille(img, (1290, 800), "Négocier ces références en premier", VERT, apparition(t, 5.6), 30)
 
 
 def s_fournisseurs(img, t, d):
@@ -289,8 +352,10 @@ SCENES = [
     ("Sans outil, l'acheteur négocie à l'aveugle. Les baisses ne sont jamais répercutées. "
      "Et le fournisseur connaît les cours avant lui.", 5.5, s_probleme),
     ("Buyvera BI confronte chaque tarif fournisseur aux cours réels des matières premières.", 4.0, s_logo),
-    ("Sur la campagne 2026, les fournisseurs demandent plus un virgule deux pour cent, quand les matières "
-     "justifient moins zéro virgule six. Trois cent trente cinq mille euros sont à renégocier.", 6.0, s_synthese),
+    ("La lettre annonce plus six virgule deux pour cent. Appliqués à tes références et à tes volumes, c'est cent trente et un mille "
+     "euros de plus par an, quand ses matières ne justifient que zéro virgule cinq : cent vingt mille euros à renégocier.", 7.5, s_synthese),
+    ("Et pas besoin de tout négocier : trente-cinq références portent quatre-vingts pour cent de l'enjeu. "
+     "On commence par elles.", 6.5, s_pareto),
     ("En un coup d'œil, vous voyez qui demande plus que ses matières ne le justifient.", 4.5, s_fournisseurs),
     ("Les alertes matières vous préviennent avant le fournisseur. Une baisse ? On le convoque. "
      "Une hausse ? On anticipe les achats. Pour 2027, les cours justifient déjà plus onze pour cent.", 6.5, s_alertes),
@@ -307,7 +372,7 @@ SCENES = [
 FONDU = 0.35  # fondu au noir entre scènes, en secondes
 VOIX = False  # True : voix off Windows (Hortense) calée sur chaque scène
 # Durée de lecture de chaque scène sans voix off (secondes)
-DUREES_LECTURE = [4.5, 3.0, 6.5, 4.5, 6.0, 5.0, 7.0, 5.5, 6.5, 6.0, 4.5, 5.5, 5.0]
+DUREES_LECTURE = [4.5, 3.0, 6.5, 4.5, 7.5, 7.0, 5.0, 7.0, 5.5, 6.5, 6.0, 4.5, 5.5, 5.0]
 
 
 def voix(dossier: Path) -> list[Path]:

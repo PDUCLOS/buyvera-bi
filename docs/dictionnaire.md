@@ -2,7 +2,7 @@
 
 Généré par `scripts/export_dictionary.py` depuis le modèle TMDL (`pbip/BuyveraBI.SemanticModel`). Ne pas modifier à la main.
 
-26 tables · 138 colonnes · 94 mesures · 26 relations · 2 rôles
+26 tables · 138 colonnes · 99 mesures · 26 relations · 2 rôles
 
 ## Sommaire
 
@@ -113,7 +113,7 @@ Toutes de plusieurs vers un, filtrage dans un seul sens.
 | Surcoût vs meilleur prix groupe | `#,0 €` | Ce que les sites paient au-dessus du meilleur prix obtenu par un site du groupe pour le même article la même année. |
 | % surcoût groupe | `0.0%` | Surcoût vs meilleur prix groupe / montant payé. |
 | Prix payé moyen | `#,0.00 €` | Montant payé / quantité. |
-| Meilleur prix groupe | `#,0.00 €` | Meilleur prix moyen payé par un site du groupe (un article à la fois). |
+| Meilleur prix groupe | `#,0.00 €` | Meilleur prix moyen payé par un site du groupe pour l'article et l'année, pondéré par les quantités achetées. |
 | Écart d'application € | `+#,0 €;-#,0 €;0 €` | Prix payé − prix du tarif, sur les lignes où l'ERP n'applique pas le tarif : positif = payé trop cher. |
 | Payé en trop (application) | `#,0 €` | Somme des écarts d'application défavorables (payé au-dessus du tarif). |
 | Articles en écart d'application | `#,0` | Articles avec au moins une ligne en retard ou en écart durable. |
@@ -128,6 +128,16 @@ Toutes de plusieurs vers un, filtrage dans un seul sens.
 | Hausse demandée (négo) % | `+0.0%;-0.0%;0.0%` | Hausse demandée, pondérée par la valeur N. |
 | Hausse obtenue % | `+0.0%;-0.0%;0.0%` | Hausse finalement accordée, pondérée par la valeur N. |
 | Hausse justifiée (négo) % | `+0.0%;-0.0%;0.0%` | Hausse justifiée par les matières, pondérée par la valeur N. |
+
+### 13. 80/20
+
+| Mesure | Format | Description |
+|---|---|---|
+| Part cumulée de l'enjeu % | `0%` | Part des € renégociables portée par cette référence et toutes celles qui pèsent plus (courbe de Pareto). |
+| Priorité 80/20 | `` | « À négocier en priorité » pour les références qui font 80 % de l'enjeu, sinon « Ensuite ». |
+| Références pour 80 % de l'enjeu | `#,0` | Nombre de références qui portent 80 % des € renégociables : celles à mettre sur la table en premier. |
+| Part de l'enjeu sur 20 % des références | `0%` | Part des € renégociables portée par les 20 % de références comparables qui pèsent le plus. |
+| Nb références comparables | `#,0` | Références présentes aux deux campagnes, comptées par désignation. |
 
 ### 2. Matières
 
