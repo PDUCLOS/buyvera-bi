@@ -84,3 +84,13 @@ Les deux se complètent :
 - **Buyvera BI** (Power BI) est la vue de pilotage et de préparation : alertes matières avant la campagne, ciblage des fournisseurs, fiche de rendez-vous.
 
 Les mêmes principes s'appliquent aux deux : hausse pondérée par les volumes, valeur vide plutôt que devinée, l'outil ne décide pas à la place de l'acheteur.
+
+## Attentes acheteurs ajoutées (Desktop seul, sans Power BI Service)
+
+| Attente | Page | Ce que l'acheteur obtient |
+|---|---|---|
+| Vision groupe : le même article payé moins cher ailleurs | **Prix payés** | Surcoût vs meilleur prix du groupe par site, liste des articles à aligner (clic droit → Extraire → Détail article). |
+| Prix payé = prix négocié ? | **Prix payés** | Écart d'application par cause (retard d'application, écart durable), tableau à transmettre à l'approvisionneur du site. |
+| Montrer ce que rapporte la négociation | **Gains** | Économies obtenues, potentiel renégociable, taux de transformation, hausse demandée vs obtenue par fournisseur. |
+
+Les alertes automatiques par e-mail demandent Power BI Service : non activé ici, les alertes restent sur la page **Alertes matières**.

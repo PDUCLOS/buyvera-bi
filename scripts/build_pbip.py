@@ -233,6 +233,35 @@ TABLES["ml_anomalies_tarif"] = dict(
           ("anomalie", B, "Vrai si la ligne est isolée.", {}),
           ("enjeu_eur", D, "Écart positif × prix N × volume N.", dict(hidden=True))])
 
+TABLES["dim_entite"] = dict(
+    desc="Sites du groupe client (fictif) : un site historique et deux sites rachetés.",
+    cols=[("entite_id", S, "Identifiant du site.", dict(hidden=True)),
+          ("nom", S, "Nom du site.", {}),
+          ("pays", S, "Pays.", {}),
+          ("origine", S, "Site historique ou racheté (année).", {})])
+TABLES["fact_achats_entite"] = dict(
+    desc="Achats répartis par site avec le prix réellement payé dans l'ERP du site (scripts/generate_groupe.py).",
+    cols=[("article_id", S, "Article.", dict(hidden=True)),
+          ("date", DT, "Mois d'achat.", dict(hidden=True, fmt="Short Date")),
+          ("entite_id", S, "Site.", dict(hidden=True)),
+          ("quantite", I, "Quantité achetée par le site.", dict(hidden=True)),
+          ("prix_tarif", D, "Prix du tarif groupe en vigueur.", dict(hidden=True)),
+          ("prix_paye", D, "Prix payé dans l'ERP du site.", dict(hidden=True)),
+          ("statut_prix", S, "Conforme, Prix historique du site, Retard d'application ou Écart durable.", {}),
+          ("meilleur_prix_groupe", D, "Plus bas prix moyen payé par un site du groupe pour l'article dans l'année.", dict(hidden=True)),
+          ("surcout_vs_meilleur", D, "Quantité × (prix payé − meilleur prix du groupe).", dict(hidden=True)),
+          ("ecart_application", D, "Quantité × (prix payé − prix du tarif), sur les lignes en retard ou en écart.", dict(hidden=True))])
+TABLES["fact_negociation"] = dict(
+    desc="Résultat de chaque campagne par fournisseur : hausse demandée, obtenue, économie (saisie de l'acheteur, fichier modifiable).",
+    cols=[("fournisseur_id", S, "Fournisseur.", dict(hidden=True)),
+          ("campagne", I, "Campagne.", {}),
+          ("valeur_n", D, "Valeur N du panier comparable.", dict(hidden=True)),
+          ("hausse_demandee", D, "Hausse demandée.", dict(hidden=True)),
+          ("hausse_justifiee", D, "Hausse justifiée par les matières.", dict(hidden=True)),
+          ("hausse_obtenue", D, "Hausse finalement accordée.", dict(hidden=True)),
+          ("eur_renegociables", D, "Potentiel renégociable de la campagne.", dict(hidden=True)),
+          ("economie_eur", D, "(demandée − obtenue) × valeur N.", dict(hidden=True))])
+
 # Relations : (table plusieurs, colonne, table un, colonne). Toutes 1→N, filtrage unidirectionnel.
 RELATIONS = [
     ("fact_tarif", "article_id", "dim_article", "article_id"),
@@ -257,6 +286,10 @@ RELATIONS = [
     ("ml_plafond_2027", "fournisseur_id", "dim_fournisseur", "fournisseur_id"),
     ("ml_segments_fournisseurs", "fournisseur_id", "dim_fournisseur", "fournisseur_id"),
     ("ml_anomalies_tarif", "article_id", "dim_article", "article_id"),
+    ("fact_achats_entite", "article_id", "dim_article", "article_id"),
+    ("fact_achats_entite", "date", "dim_date", "date"),
+    ("fact_achats_entite", "entite_id", "dim_entite", "entite_id"),
+    ("fact_negociation", "fournisseur_id", "dim_fournisseur", "fournisseur_id"),
 ]
 
 # Tables de paramètres (déconnectées) : nom → (colonne, valeurs, valeur par défaut, description)
@@ -753,6 +786,37 @@ RETURN
      "AVERAGE ( ml_anomalies_tarif[demandee] )"),
     ("Justifiée (ligne) %", "10. Prévisions ML", "+0.0%;-0.0%;0.0%", "Hausse justifiée de la ligne.",
      "AVERAGE ( ml_anomalies_tarif[hausse_justifiee] )"),
+    ("Montant payé", "11. Groupe", "#,0 €", "Quantités × prix payé dans l'ERP des sites.",
+     "SUMX ( fact_achats_entite, fact_achats_entite[quantite] * fact_achats_entite[prix_paye] )"),
+    ("Surcoût vs meilleur prix groupe", "11. Groupe", "#,0 €",
+     "Ce que les sites paient au-dessus du meilleur prix obtenu par un site du groupe pour le même article la même année.",
+     "SUM ( fact_achats_entite[surcout_vs_meilleur] )"),
+    ("% surcoût groupe", "11. Groupe", "0.0%", "Surcoût vs meilleur prix groupe / montant payé.",
+     "DIVIDE ( [Surcoût vs meilleur prix groupe], [Montant payé] )"),
+    ("Prix payé moyen", "11. Groupe", "#,0.00 €", "Montant payé / quantité.",
+     "DIVIDE ( [Montant payé], SUM ( fact_achats_entite[quantite] ) )"),
+    ("Meilleur prix groupe", "11. Groupe", "#,0.00 €", "Meilleur prix moyen payé par un site du groupe (un article à la fois).",
+     "IF ( HASONEVALUE ( dim_article[article_id] ), AVERAGE ( fact_achats_entite[meilleur_prix_groupe] ) )"),
+    ("Écart d'application €", "11. Groupe", "+#,0 €;-#,0 €;0 €",
+     "Prix payé − prix du tarif, sur les lignes où l'ERP n'applique pas le tarif : positif = payé trop cher.",
+     "SUM ( fact_achats_entite[ecart_application] )"),
+    ("Payé en trop (application)", "11. Groupe", "#,0 €", "Somme des écarts d'application défavorables (payé au-dessus du tarif).",
+     "SUMX ( FILTER ( fact_achats_entite, fact_achats_entite[ecart_application] > 0 ), fact_achats_entite[ecart_application] )"),
+    ("Articles en écart d'application", "11. Groupe", "#,0", "Articles avec au moins une ligne en retard ou en écart durable.",
+     """CALCULATE ( DISTINCTCOUNT ( fact_achats_entite[article_id] ),
+    fact_achats_entite[statut_prix] IN { "Retard d'application", "Écart durable" } )"""),
+    ("Économies obtenues €", "12. Gains", "#,0 €", "Hausse refusée au fournisseur × valeur N : ce que la négociation a réellement rapporté.",
+     "SUM ( fact_negociation[economie_eur] )"),
+    ("Potentiel renégociable €", "12. Gains", "#,0 €", "€ renégociables des campagnes (écart à la hausse justifiée).",
+     "SUM ( fact_negociation[eur_renegociables] )"),
+    ("Taux de transformation", "12. Gains", "0%", "Économies obtenues / potentiel renégociable.",
+     "DIVIDE ( [Économies obtenues €], [Potentiel renégociable €] )"),
+    ("Hausse demandée (négo) %", "12. Gains", "+0.0%;-0.0%;0.0%", "Hausse demandée, pondérée par la valeur N.",
+     "DIVIDE ( SUMX ( fact_negociation, fact_negociation[valeur_n] * fact_negociation[hausse_demandee] ), SUM ( fact_negociation[valeur_n] ) )"),
+    ("Hausse obtenue %", "12. Gains", "+0.0%;-0.0%;0.0%", "Hausse finalement accordée, pondérée par la valeur N.",
+     "DIVIDE ( SUMX ( fact_negociation, fact_negociation[valeur_n] * fact_negociation[hausse_obtenue] ), SUM ( fact_negociation[valeur_n] ) )"),
+    ("Hausse justifiée (négo) %", "12. Gains", "+0.0%;-0.0%;0.0%", "Hausse justifiée par les matières, pondérée par la valeur N.",
+     "DIVIDE ( SUMX ( fact_negociation, fact_negociation[valeur_n] * fact_negociation[hausse_justifiee] ), SUM ( fact_negociation[valeur_n] ) )"),
     ("Conseil appro", "7. Alertes", "",
      "Conseil d'approvisionnement avant la prochaine campagne : baisse matière → limiter les achats et attendre le nouveau tarif ; hausse > 3 % → anticiper les achats avant le 1er janvier.",
      """VAR _p = [Plafond justifié prochaine campagne %]
@@ -1023,6 +1087,59 @@ PAGES = [
                            m("Évol. volume %"): "Volume", m("Effet prix %"): "Effet prix", m("Surcoût prix €"): "Surcoût €"}},
           filtres=[(("c", "dim_date", "annee"), [2026])]),
     ]),
+    ("Prix payés", entete(
+        "Prix payés dans le groupe",
+        "Le même article, partout : surcoût vs le meilleur prix du groupe, et tarifs mal appliqués dans les ERP des sites.") + [
+        segment(("c", "dim_date", "annee"), 20, 80, w=180, titre="Année"),
+        segment(("c", "dim_entite", "nom"), 215, 80, w=220, titre="Site"),
+        segment(FOURN, 450, 80, w=260, titre="Fournisseur"),
+        tuile(20, 152, 300, 84, "Surcoût vs meilleur prix groupe", "Surcoût vs meilleur prix du groupe", cle=True),
+        tuile(335, 152, 300, 84, "% surcoût groupe", "Part du montant payé"),
+        tuile(650, 152, 300, 84, "Payé en trop (application)", "Payé au-dessus du tarif (ERP)"),
+        tuile(965, 152, 295, 84, "Articles en écart d'application", "Articles à corriger dans les ERP"),
+        v("clusteredBarChart", 20, 250, 400, 220, {"Category": [("c", "dim_entite", "nom")], "Y": [m("Surcoût vs meilleur prix groupe")]},
+          titre="Surcoût par site", ordre=(m("Surcoût vs meilleur prix groupe"), 2), objets={"labels": True}),
+        v("clusteredBarChart", 440, 250, 820, 220, {"Category": [("c", "fact_achats_entite", "statut_prix")], "Y": [m("Écart d'application €")]},
+          titre="Écart d'application par cause : retard = ancien tarif encore appliqué, écart durable = prix mal saisi",
+          ordre=(m("Écart d'application €"), 2), objets={"labels": True},
+          filtres=[(("c", "fact_achats_entite", "statut_prix"), ["Retard d'application", "Écart durable"])]),
+        v("tableEx", 20, 484, 620, 216,
+          {"Values": [("c", "dim_article", "designation"), ("c", "dim_entite", "nom"), m("Prix payé moyen"),
+                      m("Meilleur prix groupe"), m("Surcoût vs meilleur prix groupe")]},
+          titre="Aligner sur le meilleur prix du groupe · clic droit → Extraire → Détail article",
+          ordre=(m("Surcoût vs meilleur prix groupe"), 2),
+          objets={"noms": {("c", "dim_article", "designation"): "Article", ("c", "dim_entite", "nom"): "Site",
+                           m("Prix payé moyen"): "Payé", m("Meilleur prix groupe"): "Meilleur", m("Surcoût vs meilleur prix groupe"): "Surcoût"},
+                  "largeurs": {("c", "dim_article", "designation"): 210, ("c", "dim_entite", "nom"): 95,
+                               m("Prix payé moyen"): 70, m("Meilleur prix groupe"): 70, m("Surcoût vs meilleur prix groupe"): 70}}),
+        v("tableEx", 660, 484, 600, 216,
+          {"Values": [("c", "dim_article", "designation"), ("c", "dim_entite", "nom"), ("c", "fact_achats_entite", "statut_prix"),
+                      m("Écart d'application €")]},
+          titre="Tarifs mal appliqués : à transmettre à l'approvisionneur du site", ordre=(m("Écart d'application €"), 2),
+          objets={"noms": {("c", "dim_article", "designation"): "Article", ("c", "dim_entite", "nom"): "Site",
+                           ("c", "fact_achats_entite", "statut_prix"): "Cause", m("Écart d'application €"): "Écart"},
+                  "largeurs": {("c", "dim_article", "designation"): 230, ("c", "dim_entite", "nom"): 95,
+                               ("c", "fact_achats_entite", "statut_prix"): 110, m("Écart d'application €"): 70}},
+          filtres=[(("c", "fact_achats_entite", "statut_prix"), ["Retard d'application", "Écart durable"])]),
+    ]),
+    ("Gains", entete(
+        "Gains de négociation",
+        "Ce que les négociations ont réellement rapporté, face au potentiel chiffré avant chaque campagne.") + [
+        segment(("c", "dim_famille", "univers"), 20, 80, titre="Univers"),
+        tuile(20, 152, 300, 84, "Économies obtenues €", "Économies obtenues · 3 campagnes", cle=True),
+        tuile(335, 152, 300, 84, "Potentiel renégociable €", "Potentiel renégociable"),
+        tuile(650, 152, 300, 84, "Taux de transformation", "Taux de transformation"),
+        tuile(965, 152, 295, 84, "Hausse obtenue %", "Hausse accordée (moyenne pondérée)"),
+        v("clusteredColumnChart", 20, 250, 620, 450,
+          {"Category": [("c", "fact_negociation", "campagne")], "Y": [m("Potentiel renégociable €"), m("Économies obtenues €")]},
+          titre="Potentiel vs économies obtenues, par campagne", ordre=(("c", "fact_negociation", "campagne"), 1), objets={"labels": True}),
+        v("tableEx", 660, 250, 600, 450,
+          {"Values": [FOURN, m("Hausse demandée (négo) %"), m("Hausse justifiée (négo) %"), m("Hausse obtenue %"),
+                      m("Économies obtenues €"), m("Taux de transformation")]},
+          titre="Par fournisseur · clic droit → Extraire → Fiche négociation", ordre=(m("Économies obtenues €"), 2),
+          objets={"noms": {FOURN: "Fournisseur", m("Hausse demandée (négo) %"): "Demandée", m("Hausse justifiée (négo) %"): "Justifiée",
+                           m("Hausse obtenue %"): "Obtenue", m("Économies obtenues €"): "Économie", m("Taux de transformation"): "Taux"}}),
+    ]),
     ("Prévisions", entete(
         "Prévisions (machine learning)",
         "Chaque modèle est testé sur le passé contre une référence naïve et n'est gardé que s'il la bat. Détail : docs/ml_rapport.md.") + [
@@ -1092,9 +1209,9 @@ PAGES = [
 LARGEUR_NAV = 200
 # Ordre de navigation : le parcours de négociation, puis les pages de détail
 ORDRE = ["Parcours négociation", "Synthèse campagne", "Alertes matières", "Fournisseurs", "Fiche négociation",
-         "Prix & volumes", "Prévisions", "Détail article", "Matières", "Rattachement"]
+         "Prix & volumes", "Prix payés", "Prévisions", "Gains", "Détail article", "Matières", "Rattachement"]
 PAGES.sort(key=lambda p: ORDRE.index(p[0]))
-ICONES = ["➜", "◉", "⚑", "◎", "✎", "€", "◷", "▤", "≋", "⇄"]
+ICONES = ["➜", "◉", "⚑", "◎", "✎", "€", "▦", "◷", "✓", "▤", "≋", "⇄"]
 COURT = {"Parcours négociation": "Parcours"}  # libellés de navigation raccourcis
 # Pages cibles d'extraction (clic droit → Extraire) : champ transmis
 EXTRACTION = {"Fiche négociation": ("dim_fournisseur", "nom"), "Détail article": ("dim_article", "designation")}
@@ -1168,10 +1285,10 @@ THEME = {
 
 
 NAV = ["Parcours négociation", "Synthèse campagne", "Alertes matières", "Fournisseurs", "Prix & volumes",
-       "Prévisions", "Fiche négociation", "Matières", "Rattachement"]  # Détail article : par extraction uniquement
+       "Prix payés", "Prévisions", "Fiche négociation", "Gains", "Matières", "Rattachement"]  # Détail article : par extraction uniquement
 NAV_COURT = {"Parcours négociation": "Parcours", "Synthèse campagne": "Synthèse", "Alertes matières": "Alertes",
-             "Fournisseurs": "Fournisseurs", "Prix & volumes": "Prix & vol.", "Prévisions": "Prévisions", "Fiche négociation": "Négocier",
-             "Matières": "Matières", "Rattachement": "Rattachement"}
+             "Fournisseurs": "Fournisseurs", "Prix & volumes": "Prix & vol.", "Prix payés": "Prix payés", "Gains": "Gains", "Prévisions": "Prévisions", "Fiche négociation": "Négocier",
+             "Matières": "Matières", "Rattachement": "Réfs"}
 
 
 def barre_navigation(page: int) -> list[dict]:
@@ -1179,10 +1296,13 @@ def barre_navigation(page: int) -> list[dict]:
     nom_page = PAGES[page][0]
     l = [v("shape", 0, 0, 1280, HAUT, objets={"couleur": NAVY}),
          v("textbox", 20, 10, 170, 40, texte=("Buyvera BI", ""), objets={"blanc": True, "logo": True})]
-    w = (1280 - 200 - 16) / len(NAV)
-    for i, nom in enumerate(NAV):
-        l.append(v("nav", round(200 + i * w), 10, round(w - 6), 36,
+    # largeur de chaque onglet proportionnelle à son libellé
+    poids = [len(NAV_COURT[n]) + 4 for n in NAV]
+    unite, x = (1280 - 200 - 16) / sum(poids), 200.0
+    for nom, pw in zip(NAV, poids):
+        l.append(v("nav", round(x), 10, round(pw * unite - 4), 36,
                    objets={"cible": nom, "texte": NAV_COURT[nom], "actif": nom == nom_page, "onglet": True}))
+        x += pw * unite
     return l
 
 
@@ -1365,7 +1485,7 @@ def visuel(page: int, i: int, d: dict) -> dict:
             "icon": [{"properties": {"show": lit(False)}}, etat("default", {"shapeType": lit("blank")})],
             "text": [{"properties": {"show": lit(True)}},
                      etat("default", {"text": lit(o["texte"]), "fontColor": {"solid": {"color": lit(texte)}},
-                                      "fontSize": lit(11), "fontFamily": lit("Segoe UI Semibold"),
+                                      "fontSize": lit(10 if o.get("onglet") else 11), "fontFamily": lit("Segoe UI Semibold"),
                                       "horizontalAlignment": lit("center" if o.get("onglet") or o.get("centre") else "left"),
                                       "leftMargin": lit(14)}),
                      etat("hover", {"text": lit(o["texte"]), "fontColor": {"solid": {"color": lit("#FFFFFF")}}})],
@@ -1418,6 +1538,9 @@ def visuel(page: int, i: int, d: dict) -> dict:
             objets["values"] = [{"properties": {"fontColor": {"solid": {"color": mes}}},
                                  "selector": {"data": [{"dataViewWildcard": {"matchingOption": 1}}],
                                               "metadata": q.ref(col)}}]
+        if d["objets"].get("largeurs"):
+            objets["columnWidth"] = [{"properties": {"value": lit(float(px))}, "selector": {"metadata": q.ref(c)}}
+                                     for c, px in d["objets"]["largeurs"].items()]
         if d["objets"].get("wrap"):
             objets["wordWrap"] = [{"properties": {"show": lit(True)}}]
         if d["objets"].get("catlabels"):

@@ -2,7 +2,7 @@
 
 Généré par `scripts/export_dictionary.py` depuis le modèle TMDL (`pbip/BuyveraBI.SemanticModel`). Ne pas modifier à la main.
 
-23 tables · 116 colonnes · 80 mesures · 22 relations · 2 rôles
+26 tables · 138 colonnes · 94 mesures · 26 relations · 2 rôles
 
 ## Sommaire
 
@@ -11,14 +11,17 @@ Généré par `scripts/export_dictionary.py` depuis le modèle TMDL (`pbip/Buyve
 - [dim_acheteur](#dim_acheteur) — Acheteurs. L'email sert à la sécurité par ligne (RLS).
 - [dim_article](#dim_article) — Articles achetés, avec le résultat du rattachement référence tarif / référence ERP.
 - [dim_date](#dim_date) — Calendrier journalier 2022-2026. Les faits mensuels pointent sur le 1er du mois.
+- [dim_entite](#dim_entite) — Sites du groupe client (fictif) : un site historique et deux sites rachetés.
 - [dim_famille](#dim_famille) — Familles de produits, rattachées à un univers et à un acheteur.
 - [dim_fournisseur](#dim_fournisseur) — Fournisseurs (fictifs).
 - [dim_matiere](#dim_matiere) — Matières premières et part non matière, avec la série INSEE source.
 - [fact_achats](#fact_achats) — Quantités achetées par article et par mois (synthétique, Pareto 80/20).
+- [fact_achats_entite](#fact_achats_entite) — Achats répartis par site avec le prix réellement payé dans l'ERP du site (scripts/generate_groupe.py).
 - [fact_hausse_article](#fact_hausse_article) — Précalcul (scripts/precalcul_hausses.py) : hausse par article pour chaque campagne N+1, fenêtre et décalage. Rend les mesures instantanées.
 - [fact_impact_matiere](#fact_impact_matiere) — Précalcul : surcoût justifié par chaque matière pour chaque article à la prochaine campagne.
 - [fact_indice](#fact_indice) — Indices matières mensuels réels (INSEE BDM) et série d'hypothèse non matière à 2 %/an.
 - [fact_indice_fournisseur](#fact_indice_fournisseur) — Précalcul : indice mensuel par fournisseur (base 100 = tarif 2023) du prix fournisseur et du coût matière de son panier. L'écart montre le décalage de répercussion.
+- [fact_negociation](#fact_negociation) — Résultat de chaque campagne par fournisseur : hausse demandée, obtenue, économie (saisie de l'acheteur, fichier modifiable).
 - [fact_tarif](#fact_tarif) — Prix brut public par article et par campagne tarifaire (synthétique).
 - [ml_anomalies_tarif](#ml_anomalies_tarif) — Machine learning (scripts/ml_predictions.py) : lignes du tarif 2026 isolées par Isolation Forest (hausse atypique pour sa famille).
 - [ml_plafond_2027](#ml_plafond_2027) — Machine learning (scripts/ml_predictions.py) : plafond de hausse justifiable 2027 projeté par fournisseur (central et fourchette à 80 %).
@@ -58,6 +61,10 @@ Toutes de plusieurs vers un, filtrage dans un seul sens.
 | `ml_plafond_2027.fournisseur_id` | `dim_fournisseur.fournisseur_id` |
 | `ml_segments_fournisseurs.fournisseur_id` | `dim_fournisseur.fournisseur_id` |
 | `ml_anomalies_tarif.article_id` | `dim_article.article_id` |
+| `fact_achats_entite.article_id` | `dim_article.article_id` |
+| `fact_achats_entite.date` | `dim_date.date` |
+| `fact_achats_entite.entite_id` | `dim_entite.entite_id` |
+| `fact_negociation.fournisseur_id` | `dim_fournisseur.fournisseur_id` |
 
 ## Sécurité par ligne
 
@@ -97,6 +104,30 @@ Toutes de plusieurs vers un, filtrage dans un seul sens.
 | € lignes anormales | `#,0 €` | Écart en euros des lignes isolées en hausse excessive. |
 | Demandée (ligne) % | `+0.0%;-0.0%;0.0%` | Hausse demandée de la ligne. |
 | Justifiée (ligne) % | `+0.0%;-0.0%;0.0%` | Hausse justifiée de la ligne. |
+
+### 11. Groupe
+
+| Mesure | Format | Description |
+|---|---|---|
+| Montant payé | `#,0 €` | Quantités × prix payé dans l'ERP des sites. |
+| Surcoût vs meilleur prix groupe | `#,0 €` | Ce que les sites paient au-dessus du meilleur prix obtenu par un site du groupe pour le même article la même année. |
+| % surcoût groupe | `0.0%` | Surcoût vs meilleur prix groupe / montant payé. |
+| Prix payé moyen | `#,0.00 €` | Montant payé / quantité. |
+| Meilleur prix groupe | `#,0.00 €` | Meilleur prix moyen payé par un site du groupe (un article à la fois). |
+| Écart d'application € | `+#,0 €;-#,0 €;0 €` | Prix payé − prix du tarif, sur les lignes où l'ERP n'applique pas le tarif : positif = payé trop cher. |
+| Payé en trop (application) | `#,0 €` | Somme des écarts d'application défavorables (payé au-dessus du tarif). |
+| Articles en écart d'application | `#,0` | Articles avec au moins une ligne en retard ou en écart durable. |
+
+### 12. Gains
+
+| Mesure | Format | Description |
+|---|---|---|
+| Économies obtenues € | `#,0 €` | Hausse refusée au fournisseur × valeur N : ce que la négociation a réellement rapporté. |
+| Potentiel renégociable € | `#,0 €` | € renégociables des campagnes (écart à la hausse justifiée). |
+| Taux de transformation | `0%` | Économies obtenues / potentiel renégociable. |
+| Hausse demandée (négo) % | `+0.0%;-0.0%;0.0%` | Hausse demandée, pondérée par la valeur N. |
+| Hausse obtenue % | `+0.0%;-0.0%;0.0%` | Hausse finalement accordée, pondérée par la valeur N. |
+| Hausse justifiée (négo) % | `+0.0%;-0.0%;0.0%` | Hausse justifiée par les matières, pondérée par la valeur N. |
 
 ### 2. Matières
 
@@ -259,6 +290,17 @@ Calendrier journalier 2022-2026. Les faits mensuels pointent sur le 1er du mois.
 | `campagne` | int64 | oui | Campagne tarifaire en vigueur à cette date (tarif au 1er janvier). |
 | `mois_court` | string (calculée) | oui | Mois en clair sans l'année (axe des comparaisons année sur année). |
 
+### dim_entite
+
+Sites du groupe client (fictif) : un site historique et deux sites rachetés.
+
+| Colonne | Type | Visible | Description |
+|---|---|---|---|
+| `entite_id` | string | non | Identifiant du site. |
+| `nom` | string | oui | Nom du site. |
+| `pays` | string | oui | Pays. |
+| `origine` | string | oui | Site historique ou racheté (année). |
+
 ### dim_famille
 
 Familles de produits, rattachées à un univers et à un acheteur.
@@ -311,6 +353,23 @@ Quantités achetées par article et par mois (synthétique, Pareto 80/20).
 | `montant` | double (calculée) | non | Quantité × prix brut de l'année. |
 | `prix_unitaire_n1` | double (calculée) | non | Prix brut du tarif de l'année précédant l'achat (effet prix). |
 
+### fact_achats_entite
+
+Achats répartis par site avec le prix réellement payé dans l'ERP du site (scripts/generate_groupe.py).
+
+| Colonne | Type | Visible | Description |
+|---|---|---|---|
+| `article_id` | string | non | Article. |
+| `date` | dateTime | non | Mois d'achat. |
+| `entite_id` | string | non | Site. |
+| `quantite` | int64 | non | Quantité achetée par le site. |
+| `prix_tarif` | double | non | Prix du tarif groupe en vigueur. |
+| `prix_paye` | double | non | Prix payé dans l'ERP du site. |
+| `statut_prix` | string | oui | Conforme, Prix historique du site, Retard d'application ou Écart durable. |
+| `meilleur_prix_groupe` | double | non | Plus bas prix moyen payé par un site du groupe pour l'article dans l'année. |
+| `surcout_vs_meilleur` | double | non | Quantité × (prix payé − meilleur prix du groupe). |
+| `ecart_application` | double | non | Quantité × (prix payé − prix du tarif), sur les lignes en retard ou en écart. |
+
 ### fact_hausse_article
 
 Précalcul (scripts/precalcul_hausses.py) : hausse par article pour chaque campagne N+1, fenêtre et décalage. Rend les mesures instantanées.
@@ -359,6 +418,21 @@ Précalcul : indice mensuel par fournisseur (base 100 = tarif 2023) du prix four
 | `date` | dateTime | non | Mois (1er du mois). |
 | `indice_cout_matiere` | double | non | Coût matière du panier fixe du fournisseur, base 100 = référence du tarif 2023. |
 | `indice_prix` | double | non | Prix du tarif en vigueur sur le même panier, base 100 = tarif 2023. |
+
+### fact_negociation
+
+Résultat de chaque campagne par fournisseur : hausse demandée, obtenue, économie (saisie de l'acheteur, fichier modifiable).
+
+| Colonne | Type | Visible | Description |
+|---|---|---|---|
+| `fournisseur_id` | string | non | Fournisseur. |
+| `campagne` | int64 | oui | Campagne. |
+| `valeur_n` | double | non | Valeur N du panier comparable. |
+| `hausse_demandee` | double | non | Hausse demandée. |
+| `hausse_justifiee` | double | non | Hausse justifiée par les matières. |
+| `hausse_obtenue` | double | non | Hausse finalement accordée. |
+| `eur_renegociables` | double | non | Potentiel renégociable de la campagne. |
+| `economie_eur` | double | non | (demandée − obtenue) × valeur N. |
 
 ### fact_tarif
 

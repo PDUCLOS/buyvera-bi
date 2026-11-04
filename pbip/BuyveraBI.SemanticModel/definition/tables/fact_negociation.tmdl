@@ -1,0 +1,94 @@
+/// Résultat de chaque campagne par fournisseur : hausse demandée, obtenue, économie (saisie de l'acheteur, fichier modifiable).
+table fact_negociation
+	lineageTag: a40590af-23ba-5172-99e5-51aad26f917b
+
+	/// Fournisseur.
+	column fournisseur_id
+		dataType: string
+		isHidden
+		lineageTag: a082235c-dbf4-5272-a497-d6faa388eea0
+		summarizeBy: none
+		sourceColumn: fournisseur_id
+
+		annotation SummarizationSetBy = User
+
+	/// Campagne.
+	column campagne
+		dataType: int64
+		lineageTag: 850ae228-79e5-537e-9f8f-4f891c1797b3
+		summarizeBy: none
+		sourceColumn: campagne
+
+		annotation SummarizationSetBy = User
+
+	/// Valeur N du panier comparable.
+	column valeur_n
+		dataType: double
+		isHidden
+		lineageTag: 3a6f92b6-9d84-5d8c-9495-a9cbd39f0003
+		summarizeBy: none
+		sourceColumn: valeur_n
+
+		annotation SummarizationSetBy = User
+
+	/// Hausse demandée.
+	column hausse_demandee
+		dataType: double
+		isHidden
+		lineageTag: 20b2ca84-bbc5-51c8-8f03-7b82f54ec5a5
+		summarizeBy: none
+		sourceColumn: hausse_demandee
+
+		annotation SummarizationSetBy = User
+
+	/// Hausse justifiée par les matières.
+	column hausse_justifiee
+		dataType: double
+		isHidden
+		lineageTag: f27a64f0-6482-5197-893b-ab50941f83a3
+		summarizeBy: none
+		sourceColumn: hausse_justifiee
+
+		annotation SummarizationSetBy = User
+
+	/// Hausse finalement accordée.
+	column hausse_obtenue
+		dataType: double
+		isHidden
+		lineageTag: 1e548597-8734-5e46-9f88-ffd4021e34c8
+		summarizeBy: none
+		sourceColumn: hausse_obtenue
+
+		annotation SummarizationSetBy = User
+
+	/// Potentiel renégociable de la campagne.
+	column eur_renegociables
+		dataType: double
+		isHidden
+		lineageTag: dc727b93-3a6d-59c4-ba22-e375065fbcb1
+		summarizeBy: none
+		sourceColumn: eur_renegociables
+
+		annotation SummarizationSetBy = User
+
+	/// (demandée − obtenue) × valeur N.
+	column economie_eur
+		dataType: double
+		isHidden
+		lineageTag: 04d8a354-0fb1-5b06-9b0b-908f3feb43bb
+		summarizeBy: none
+		sourceColumn: economie_eur
+
+		annotation SummarizationSetBy = User
+
+	partition fact_negociation = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document ( File.Contents ( DossierDonnees & "fact_negociation.csv" ), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv] ),
+				    Entetes = Table.PromoteHeaders ( Source, [PromoteAllScalars = true] ),
+				    Types = Table.TransformColumnTypes ( Entetes, {{"fournisseur_id", type text}, {"campagne", Int64.Type}, {"valeur_n", type number}, {"hausse_demandee", type number}, {"hausse_justifiee", type number}, {"hausse_obtenue", type number}, {"eur_renegociables", type number}, {"economie_eur", type number}}, "en-US" )
+				in
+				    Types
+
+	annotation PBI_ResultType = Table

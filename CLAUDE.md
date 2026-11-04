@@ -13,6 +13,7 @@ Référence complète : `PROJET_BUYVERA_BI.md`. Idées d'évolution : `docs/idee
 1. `python scripts/fetch_indices.py` → `data/raw/insee_*.csv`, `data/processed/fact_indice.csv`, `dim_matiere.csv`
 2. `python scripts/generate_synthetic.py` → autres tables + `data/controle/` (calcul article par article, vérité rattachement)
 3. `python scripts/precalcul_hausses.py` → `fact_hausse_article.csv`, `fact_impact_matiere.csv` (hausses par article × campagne × fenêtre × décalage : mesures instantanées)
+3 ter. `python scripts/generate_groupe.py` → `dim_entite.csv`, `fact_achats_entite.csv` (achats répartis entre 3 sites, prix payé ERP et statut), `fact_negociation.csv` (hausse demandée / obtenue, économies par fournisseur × campagne)
 3 bis. `python scripts/ml_predictions.py` → `data/processed/ml_*.csv` + `docs/ml_rapport.md` (prévisions indices et volumes, segmentation, anomalies ; backtest contre un modèle naïf, un modèle n'est retenu que s'il le bat)
 4. `python scripts/controles.py` → `docs/rapport_controle.md` (code retour 1 si un contrôle bloquant échoue)
 5. `python scripts/build_pbip.py` → `pbip/` (modèle TMDL, relations, mesures, RLS, pages). **Source unique du modèle** : modifier `build_pbip.py`, pas les `.tmdl` à la main.

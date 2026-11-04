@@ -7,7 +7,7 @@ model Model
 		legacyRedirects
 		returnErrorValuesAsNull
 
-annotation PBI_QueryOrder = ["DossierDonnees", "dim_date", "dim_fournisseur", "dim_famille", "dim_acheteur", "dim_matiere", "dim_article", "bridge_composition", "fact_tarif", "fact_achats", "fact_indice", "fact_hausse_article", "fact_impact_matiere", "fact_indice_fournisseur", "ml_prevision_indices", "ml_variation_2027", "ml_plafond_2027", "ml_segments_fournisseurs", "ml_anomalies_tarif"]
+annotation PBI_QueryOrder = ["DossierDonnees", "dim_date", "dim_fournisseur", "dim_famille", "dim_acheteur", "dim_matiere", "dim_article", "bridge_composition", "fact_tarif", "fact_achats", "fact_indice", "fact_hausse_article", "fact_impact_matiere", "fact_indice_fournisseur", "ml_prevision_indices", "ml_variation_2027", "ml_plafond_2027", "ml_segments_fournisseurs", "ml_anomalies_tarif", "dim_entite", "fact_achats_entite", "fact_negociation"]
 
 annotation __PBI_TimeIntelligenceEnabled = 0
 
@@ -31,6 +31,9 @@ ref table ml_variation_2027
 ref table ml_plafond_2027
 ref table ml_segments_fournisseurs
 ref table ml_anomalies_tarif
+ref table dim_entite
+ref table fact_achats_entite
+ref table fact_negociation
 ref table param_campagne
 ref table param_hausse
 ref table param_decalage

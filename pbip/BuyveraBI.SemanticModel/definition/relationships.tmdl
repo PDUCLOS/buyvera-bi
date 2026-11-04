@@ -85,3 +85,19 @@ relationship 871b8ee7-df2a-5770-bd63-dfbc406d7ad4
 relationship 74fb103b-78e2-54ed-af88-4f87f533d9dc
 	fromColumn: ml_anomalies_tarif.article_id
 	toColumn: dim_article.article_id
+
+relationship 6d1e2e27-4128-55e9-961f-9ebbcb1f9d97
+	fromColumn: fact_achats_entite.article_id
+	toColumn: dim_article.article_id
+
+relationship 1e45d8ba-6a33-5301-a326-23f0da4b6429
+	fromColumn: fact_achats_entite.date
+	toColumn: dim_date.date
+
+relationship 68877f32-e60b-54d9-a635-7344ed61d092
+	fromColumn: fact_achats_entite.entite_id
+	toColumn: dim_entite.entite_id
+
+relationship e212b9ac-16f5-585b-a3f3-4ea360eaf288
+	fromColumn: fact_negociation.fournisseur_id
+	toColumn: dim_fournisseur.fournisseur_id

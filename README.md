@@ -27,11 +27,18 @@ distribution industrielle (transmission mécanique et CVC).
 | **Rattachement** | Quelle part des références tarif se rattache seule à l'ERP (objectif 80 %) ? Liste des propositions à valider. |
 | **Alertes matières** | Ce qui monte ou baisse avant que le fournisseur ne le dise : signal 3 mois, plafond justifié pour la campagne suivante, articles exposés et plan d'action (convoquer le fournisseur, préparer la défense, limiter ou anticiper les achats). |
 | **Prix & volumes** | Année sur année, à date : montant, volumes, **effet prix à volumes constants**, surcoût par fournisseur, une courbe de volumes par année. |
+| **Prix payés** | Vision groupe sur 3 sites (un historique, deux rachetés) : **surcoût vs meilleur prix du groupe** (718 k€), tarifs mal appliqués dans les ERP (retard d'application, écart durable) à transmettre aux appros. |
+| **Gains** | Ce que la négociation a rapporté : économies obtenues (524 k€ sur 2024-2026), potentiel renégociable, **taux de transformation** (51 %), hausse demandée vs obtenue par fournisseur. |
+| **Prévisions** | Machine learning : plafond 2027 projeté, volumes à anticiper, segments fournisseurs, lignes tarifaires anormales. |
 | **Fiche négociation** | Tout pour le rendez-vous : statut, argument rédigé, **courbe de décalage prix vs coût matière**, levier matière coloré, **simulateur de contre-proposition**. Accessible par clic droit → Extraire depuis n'importe quel fournisseur. |
 
 | Fournisseurs | Alertes matières | Fiche négociation |
 |---|---|---|
 | ![](docs/captures/02_fournisseurs.png) | ![](docs/captures/06_alertes_matieres.png) | ![](docs/captures/07_fiche_negociation.png) |
+
+| Prix payés | Gains |
+|---|---|
+| ![](docs/captures/10_prix_payes.png) | ![](docs/captures/11_gains.png) |
 
 ## Les données
 
@@ -43,6 +50,8 @@ distribution industrielle (transmission mécanique et CVC).
 | Articles et composition matière | fictifs, 2 à 4 matières par article | 3 000 · 11 700 lignes |
 | Tarifs | fictifs, 4 campagnes (2023 → 2026) | 10 142 lignes |
 | Achats | fictifs, mensuels, Pareto 82/20 | 62 095 lignes |
+| Achats par site (3 sites) | fictifs, prix payé ERP + statut d'application | 99 220 lignes |
+| Résultats de négociation | fictifs, fournisseur × campagne (saisie acheteur) | 36 lignes |
 
 Les hausses fictives sont **construites à partir des vrais indices** : hausse demandée = hausse justifiée + biais du
 profil fournisseur + bruit. Cinq comportements sont injectés et vérifiés automatiquement (`docs/rapport_controle.md`) :
@@ -54,7 +63,7 @@ références modifiées, articles entrants et sortants.
 Schéma du pipeline : [`docs/pipeline_buyvera.drawio`](docs/pipeline_buyvera.drawio) (à ouvrir dans draw.io).
 
 - **Modèle en étoile** au format **PBIP / TMDL**, entièrement généré par `scripts/build_pbip.py` et versionné dans Git :
-  17 tables, 14 relations un-vers-plusieurs filtrées dans un seul sens, table de dates journalière.
+  26 tables, 26 relations, 94 mesures un-vers-plusieurs filtrées dans un seul sens, table de dates journalière.
 - **Table pont** `bridge_composition` (article × matière). Aucune relation bidirectionnelle : la hausse justifiée
   est calculée article par article puis pondérée par les volumes, ce qui évite les doubles comptes.
 - **Définitions uniques** (`CLAUDE.md`) appliquées en Python, en DAX et dans le tableau de bord Claude :
@@ -96,6 +105,8 @@ Windows, Python 3.12 (pandas, requests), Power BI Desktop.
 python scripts/fetch_indices.py        # indices INSEE (API SDMX)
 python scripts/generate_synthetic.py   # données fictives, graine fixe : résultats reproductibles
 python scripts/precalcul_hausses.py    # hausses par article
+python scripts/generate_groupe.py      # sites du groupe, prix payés, résultats de négociation
+python scripts/ml_predictions.py       # prévisions et anomalies (scikit-learn, statsmodels, lightgbm)
 python scripts/controles.py            # contrôles bloquants + docs/rapport_controle.md
 python scripts/build_pbip.py           # modèle TMDL + rapport
 python scripts/export_dictionary.py    # docs/dictionnaire.md

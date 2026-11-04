@@ -1,0 +1,52 @@
+/// Sites du groupe client (fictif) : un site historique et deux sites rachetés.
+table dim_entite
+	lineageTag: db53b493-05f4-502e-93c8-3caf444561bc
+
+	/// Identifiant du site.
+	column entite_id
+		dataType: string
+		isHidden
+		lineageTag: 5b4a6498-31ec-5b4f-946a-a525582605de
+		summarizeBy: none
+		sourceColumn: entite_id
+
+		annotation SummarizationSetBy = User
+
+	/// Nom du site.
+	column nom
+		dataType: string
+		lineageTag: 90834222-d2b8-5f8f-ade8-dab341e05031
+		summarizeBy: none
+		sourceColumn: nom
+
+		annotation SummarizationSetBy = User
+
+	/// Pays.
+	column pays
+		dataType: string
+		lineageTag: c2fe3268-2ef9-5855-9d15-e4a50a8c745a
+		summarizeBy: none
+		sourceColumn: pays
+
+		annotation SummarizationSetBy = User
+
+	/// Site historique ou racheté (année).
+	column origine
+		dataType: string
+		lineageTag: 79d1d07e-1968-5eb1-bdd3-6d84cd636836
+		summarizeBy: none
+		sourceColumn: origine
+
+		annotation SummarizationSetBy = User
+
+	partition dim_entite = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document ( File.Contents ( DossierDonnees & "dim_entite.csv" ), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv] ),
+				    Entetes = Table.PromoteHeaders ( Source, [PromoteAllScalars = true] ),
+				    Types = Table.TransformColumnTypes ( Entetes, {{"entite_id", type text}, {"nom", type text}, {"pays", type text}, {"origine", type text}}, "en-US" )
+				in
+				    Types
+
+	annotation PBI_ResultType = Table

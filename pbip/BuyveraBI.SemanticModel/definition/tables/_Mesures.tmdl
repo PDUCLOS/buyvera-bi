@@ -774,6 +774,93 @@ table _Mesures
 		displayFolder: 10. Prévisions ML
 		lineageTag: e4e541f1-f901-5893-8280-6ad4da026b36
 
+	/// Quantités × prix payé dans l'ERP des sites.
+	measure 'Montant payé' = SUMX ( fact_achats_entite, fact_achats_entite[quantite] * fact_achats_entite[prix_paye] )
+		formatString: #,0 €
+		displayFolder: 11. Groupe
+		lineageTag: 80e4e907-8354-5aa6-9247-fa10bbcc08cb
+
+	/// Ce que les sites paient au-dessus du meilleur prix obtenu par un site du groupe pour le même article la même année.
+	measure 'Surcoût vs meilleur prix groupe' = SUM ( fact_achats_entite[surcout_vs_meilleur] )
+		formatString: #,0 €
+		displayFolder: 11. Groupe
+		lineageTag: 92cab244-4a89-5353-8001-22f546f2783b
+
+	/// Surcoût vs meilleur prix groupe / montant payé.
+	measure '% surcoût groupe' = DIVIDE ( [Surcoût vs meilleur prix groupe], [Montant payé] )
+		formatString: 0.0%
+		displayFolder: 11. Groupe
+		lineageTag: 3139ec15-8ea0-5f8e-9d91-b26ae4244c54
+
+	/// Montant payé / quantité.
+	measure 'Prix payé moyen' = DIVIDE ( [Montant payé], SUM ( fact_achats_entite[quantite] ) )
+		formatString: #,0.00 €
+		displayFolder: 11. Groupe
+		lineageTag: ed58ffe7-00fb-508b-8a30-c92cb50e99db
+
+	/// Meilleur prix moyen payé par un site du groupe (un article à la fois).
+	measure 'Meilleur prix groupe' = IF ( HASONEVALUE ( dim_article[article_id] ), AVERAGE ( fact_achats_entite[meilleur_prix_groupe] ) )
+		formatString: #,0.00 €
+		displayFolder: 11. Groupe
+		lineageTag: d4dd5840-87cc-53a3-b971-63be722f859c
+
+	/// Prix payé − prix du tarif, sur les lignes où l'ERP n'applique pas le tarif : positif = payé trop cher.
+	measure 'Écart d''application €' = SUM ( fact_achats_entite[ecart_application] )
+		formatString: +#,0 €;-#,0 €;0 €
+		displayFolder: 11. Groupe
+		lineageTag: e4ee5bc0-858d-5a1a-adc1-ca38e542dd25
+
+	/// Somme des écarts d'application défavorables (payé au-dessus du tarif).
+	measure 'Payé en trop (application)' = SUMX ( FILTER ( fact_achats_entite, fact_achats_entite[ecart_application] > 0 ), fact_achats_entite[ecart_application] )
+		formatString: #,0 €
+		displayFolder: 11. Groupe
+		lineageTag: 7749f413-3cbd-5050-ac46-7c643bad4132
+
+	/// Articles avec au moins une ligne en retard ou en écart durable.
+	measure 'Articles en écart d''application' = ```
+			CALCULATE ( DISTINCTCOUNT ( fact_achats_entite[article_id] ),
+			    fact_achats_entite[statut_prix] IN { "Retard d'application", "Écart durable" } )
+			```
+		formatString: #,0
+		displayFolder: 11. Groupe
+		lineageTag: c0b2204c-5a77-57da-887f-12ee5d1df114
+
+	/// Hausse refusée au fournisseur × valeur N : ce que la négociation a réellement rapporté.
+	measure 'Économies obtenues €' = SUM ( fact_negociation[economie_eur] )
+		formatString: #,0 €
+		displayFolder: 12. Gains
+		lineageTag: 9ed92e78-6823-53cf-ae27-61bf08885fed
+
+	/// € renégociables des campagnes (écart à la hausse justifiée).
+	measure 'Potentiel renégociable €' = SUM ( fact_negociation[eur_renegociables] )
+		formatString: #,0 €
+		displayFolder: 12. Gains
+		lineageTag: 0691fd82-1aa0-51f9-9862-eaec325fc4a0
+
+	/// Économies obtenues / potentiel renégociable.
+	measure 'Taux de transformation' = DIVIDE ( [Économies obtenues €], [Potentiel renégociable €] )
+		formatString: 0%
+		displayFolder: 12. Gains
+		lineageTag: 33065d53-89c6-5234-afa5-90430f7af15f
+
+	/// Hausse demandée, pondérée par la valeur N.
+	measure 'Hausse demandée (négo) %' = DIVIDE ( SUMX ( fact_negociation, fact_negociation[valeur_n] * fact_negociation[hausse_demandee] ), SUM ( fact_negociation[valeur_n] ) )
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: 12. Gains
+		lineageTag: e0af0dac-c9f0-58c6-a1af-0fd50a131046
+
+	/// Hausse finalement accordée, pondérée par la valeur N.
+	measure 'Hausse obtenue %' = DIVIDE ( SUMX ( fact_negociation, fact_negociation[valeur_n] * fact_negociation[hausse_obtenue] ), SUM ( fact_negociation[valeur_n] ) )
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: 12. Gains
+		lineageTag: a5056ebe-62be-5427-8428-5d61253b3e73
+
+	/// Hausse justifiée par les matières, pondérée par la valeur N.
+	measure 'Hausse justifiée (négo) %' = DIVIDE ( SUMX ( fact_negociation, fact_negociation[valeur_n] * fact_negociation[hausse_justifiee] ), SUM ( fact_negociation[valeur_n] ) )
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: 12. Gains
+		lineageTag: 6a0b78ba-c045-5fa6-adb8-715f852cae42
+
 	/// Conseil d'approvisionnement avant la prochaine campagne : baisse matière → limiter les achats et attendre le nouveau tarif ; hausse > 3 % → anticiper les achats avant le 1er janvier.
 	measure 'Conseil appro' = ```
 			VAR _p = [Plafond justifié prochaine campagne %]

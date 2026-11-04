@@ -1,0 +1,11 @@
+EVALUATE
+ROW (
+    "surcout_groupe", [Surcoût vs meilleur prix groupe],
+    "pct_surcout", [% surcoût groupe],
+    "paye_en_trop", [Payé en trop (application)],
+    "articles_ecart", [Articles en écart d'application],
+    "economies", [Économies obtenues €],
+    "potentiel", [Potentiel renégociable €],
+    "taux", [Taux de transformation],
+    "hausse_obtenue_2026", CALCULATE ( [Hausse obtenue %], fact_negociation[campagne] = 2026 )
+)

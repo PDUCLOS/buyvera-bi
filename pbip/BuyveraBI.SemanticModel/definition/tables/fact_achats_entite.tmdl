@@ -1,0 +1,117 @@
+/// Achats répartis par site avec le prix réellement payé dans l'ERP du site (scripts/generate_groupe.py).
+table fact_achats_entite
+	lineageTag: 04dd06c4-7066-5da8-accd-4a48a968b71a
+
+	/// Article.
+	column article_id
+		dataType: string
+		isHidden
+		lineageTag: 2b9c71fb-31d1-5caa-a3db-1f1d4c928b2d
+		summarizeBy: none
+		sourceColumn: article_id
+
+		annotation SummarizationSetBy = User
+
+	/// Mois d'achat.
+	column date
+		dataType: dateTime
+		formatString: Short Date
+		isHidden
+		lineageTag: 7c0caa37-b0d5-5e00-8f82-b92690f36821
+		summarizeBy: none
+		sourceColumn: date
+
+		annotation UnderlyingDateTimeDataType = Date
+
+		annotation SummarizationSetBy = User
+
+	/// Site.
+	column entite_id
+		dataType: string
+		isHidden
+		lineageTag: cfbfabcd-0772-57f2-b915-5b0fccb3ea21
+		summarizeBy: none
+		sourceColumn: entite_id
+
+		annotation SummarizationSetBy = User
+
+	/// Quantité achetée par le site.
+	column quantite
+		dataType: int64
+		isHidden
+		lineageTag: 2bf76c45-917a-5631-9ed3-a64040215f6e
+		summarizeBy: none
+		sourceColumn: quantite
+
+		annotation SummarizationSetBy = User
+
+	/// Prix du tarif groupe en vigueur.
+	column prix_tarif
+		dataType: double
+		isHidden
+		lineageTag: 89967382-5db0-5d73-a916-d7b154f16ddf
+		summarizeBy: none
+		sourceColumn: prix_tarif
+
+		annotation SummarizationSetBy = User
+
+	/// Prix payé dans l'ERP du site.
+	column prix_paye
+		dataType: double
+		isHidden
+		lineageTag: 42b12797-01ab-5f46-81bf-6f6caebd49ad
+		summarizeBy: none
+		sourceColumn: prix_paye
+
+		annotation SummarizationSetBy = User
+
+	/// Conforme, Prix historique du site, Retard d'application ou Écart durable.
+	column statut_prix
+		dataType: string
+		lineageTag: eb7f4386-1821-51c8-8f33-92dd26765047
+		summarizeBy: none
+		sourceColumn: statut_prix
+
+		annotation SummarizationSetBy = User
+
+	/// Plus bas prix moyen payé par un site du groupe pour l'article dans l'année.
+	column meilleur_prix_groupe
+		dataType: double
+		isHidden
+		lineageTag: 9092ea47-1f9b-51b3-8f47-37bbe7b67334
+		summarizeBy: none
+		sourceColumn: meilleur_prix_groupe
+
+		annotation SummarizationSetBy = User
+
+	/// Quantité × (prix payé − meilleur prix du groupe).
+	column surcout_vs_meilleur
+		dataType: double
+		isHidden
+		lineageTag: 1987964f-c8bb-53c7-820f-07b8e58561db
+		summarizeBy: none
+		sourceColumn: surcout_vs_meilleur
+
+		annotation SummarizationSetBy = User
+
+	/// Quantité × (prix payé − prix du tarif), sur les lignes en retard ou en écart.
+	column ecart_application
+		dataType: double
+		isHidden
+		lineageTag: 418966ac-b9aa-5927-8ba0-f865ec7abedc
+		summarizeBy: none
+		sourceColumn: ecart_application
+
+		annotation SummarizationSetBy = User
+
+	partition fact_achats_entite = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document ( File.Contents ( DossierDonnees & "fact_achats_entite.csv" ), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv] ),
+				    Entetes = Table.PromoteHeaders ( Source, [PromoteAllScalars = true] ),
+				    Types = Table.TransformColumnTypes ( Entetes, {{"article_id", type text}, {"date", type date}, {"entite_id", type text}, {"quantite", Int64.Type}, {"prix_tarif", type number}, {"prix_paye", type number}, {"statut_prix", type text}, {"meilleur_prix_groupe", type number}, {"surcout_vs_meilleur", type number}, {"ecart_application", type number}}, "en-US" )
+				in
+				    Types
+
+	annotation PBI_ResultType = Table
