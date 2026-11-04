@@ -1,6 +1,29 @@
 {
   "config": "{\"version\": \"5.59\", \"themeCollection\": {\"customTheme\": {\"name\": \"BuyveraTheme.json\", \"version\": \"5.59\", \"type\": 1}}, \"activeSectionIndex\": 0, \"defaultDrillFilterOtherVisuals\": true, \"linguisticSchemaSyncVersion\": 0, \"settings\": {\"useNewFilterPaneExperience\": true, \"allowChangeFilterTypes\": true, \"useStylableVisualContainerHeader\": true, \"exportDataMode\": 1}, \"objects\": {}}",
   "layoutOptimization": 0,
+  "pods": [
+    {
+      "boundSection": "ReportSection04",
+      "config": "{}",
+      "name": "Liaison4",
+      "parameters": "[{\"name\": \"Param4\", \"boundFilter\": \"Extraction4\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_fournisseur\"}}, \"Property\": \"nom\"}}}]",
+      "type": 1
+    },
+    {
+      "boundSection": "ReportSection05",
+      "config": "{}",
+      "name": "Liaison5",
+      "parameters": "[{\"name\": \"Param5\", \"boundFilter\": \"Extraction5\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_fournisseur\"}}, \"Property\": \"nom\"}}}]",
+      "type": 1
+    },
+    {
+      "boundSection": "ReportSection10",
+      "config": "{}",
+      "name": "Liaison10",
+      "parameters": "[{\"name\": \"Param10\", \"boundFilter\": \"Extraction10\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_article\"}}, \"Property\": \"designation\"}}}]",
+      "type": 1
+    }
+  ],
   "resourcePackages": [
     {
       "resourcePackage": {
@@ -1021,7 +1044,7 @@
       "width": 1280.0
     },
     {
-      "config": "{\"objects\": {\"background\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#ECEAE3'\"}}}}}, \"transparency\": {\"expr\": {\"Literal\": {\"Value\": \"0D\"}}}}}], \"outspace\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#ECEAE3'\"}}}}}, \"transparency\": {\"expr\": {\"Literal\": {\"Value\": \"0D\"}}}}}]}, \"pageBinding\": {\"name\": \"Liaison4\", \"type\": 1, \"parameters\": [{\"name\": \"Param4\", \"boundFilter\": \"Extraction4\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_fournisseur\"}}, \"Property\": \"nom\"}}}]}}",
+      "config": "{\"objects\": {\"background\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#ECEAE3'\"}}}}}, \"transparency\": {\"expr\": {\"Literal\": {\"Value\": \"0D\"}}}}}], \"outspace\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#ECEAE3'\"}}}}}, \"transparency\": {\"expr\": {\"Literal\": {\"Value\": \"0D\"}}}}}]}}",
       "displayName": "Fiche négociation",
       "displayOption": 1,
       "filters": "[{\"name\": \"Extraction4\", \"expression\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_fournisseur\"}}, \"Property\": \"nom\"}}, \"type\": \"Categorical\", \"howCreated\": 5}]",
@@ -1312,7 +1335,7 @@
       "width": 1280.0
     },
     {
-      "config": "{\"objects\": {\"background\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#ECEAE3'\"}}}}}, \"transparency\": {\"expr\": {\"Literal\": {\"Value\": \"0D\"}}}}}], \"outspace\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#ECEAE3'\"}}}}}, \"transparency\": {\"expr\": {\"Literal\": {\"Value\": \"0D\"}}}}}]}, \"pageBinding\": {\"name\": \"Liaison5\", \"type\": 1, \"parameters\": [{\"name\": \"Param5\", \"boundFilter\": \"Extraction5\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_fournisseur\"}}, \"Property\": \"nom\"}}}]}}",
+      "config": "{\"objects\": {\"background\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#ECEAE3'\"}}}}}, \"transparency\": {\"expr\": {\"Literal\": {\"Value\": \"0D\"}}}}}], \"outspace\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#ECEAE3'\"}}}}}, \"transparency\": {\"expr\": {\"Literal\": {\"Value\": \"0D\"}}}}}]}}",
       "displayName": "Références 80/20",
       "displayOption": 1,
       "filters": "[{\"name\": \"Extraction5\", \"expression\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_fournisseur\"}}, \"Property\": \"nom\"}}, \"type\": \"Categorical\", \"howCreated\": 5}]",
@@ -2444,7 +2467,7 @@
       "width": 1280.0
     },
     {
-      "config": "{\"objects\": {\"background\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#ECEAE3'\"}}}}}, \"transparency\": {\"expr\": {\"Literal\": {\"Value\": \"0D\"}}}}}], \"outspace\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#ECEAE3'\"}}}}}, \"transparency\": {\"expr\": {\"Literal\": {\"Value\": \"0D\"}}}}}]}, \"pageBinding\": {\"name\": \"Liaison10\", \"type\": 1, \"parameters\": [{\"name\": \"Param10\", \"boundFilter\": \"Extraction10\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_article\"}}, \"Property\": \"designation\"}}}]}}",
+      "config": "{\"objects\": {\"background\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#ECEAE3'\"}}}}}, \"transparency\": {\"expr\": {\"Literal\": {\"Value\": \"0D\"}}}}}], \"outspace\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#ECEAE3'\"}}}}}, \"transparency\": {\"expr\": {\"Literal\": {\"Value\": \"0D\"}}}}}]}}",
       "displayName": "Détail article",
       "displayOption": 1,
       "filters": "[{\"name\": \"Extraction10\", \"expression\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_article\"}}, \"Property\": \"designation\"}}, \"type\": \"Categorical\", \"howCreated\": 5}]",

@@ -41,7 +41,8 @@ Toujours relancer les contrôles après une modification des scripts. Le rapport
 - Format PBIP + TMDL, versionné Git. Commit avant chaque série de modifications du modèle.
 
 ## Power BI Desktop : règles apprises
-- `report.json` (ancien format) : énumérations **numériques** (`pageBinding.type` 1 = extraction, `howCreated` 5, `displayOption` 1). Un texte est ignoré sans message d'erreur.
+- `report.json` (ancien format) : énumérations **numériques** (`howCreated` 5, `displayOption` 1). Un texte est ignoré sans message d'erreur.
+- Extraction (clic droit → Extraire) : la liaison va dans la liste **`pods` au niveau du rapport** (`boundSection`, `parameters` en JSON texte, `type` 1), **pas** dans un `pageBinding` de la page, que Desktop ignore. Format relevé sur un fichier enregistré par Desktop.
 - Une fonctionnalité interactive (extraction, synchro des segments, boutons) n'est annoncée dans le README, le portfolio ou la vidéo qu'après un test dans Desktop.
 - Ne jamais enregistrer (Ctrl+S) le projet dans Desktop : il propose de passer en PBIR (irréversible, casse le générateur). Si le dialogue apparaît : « Ne pas mettre à niveau ».
 - Pour connaître le format attendu : convertir une copie jetable en PBIR et lire `definition/pages/*/page.json`.

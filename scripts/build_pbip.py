@@ -1275,6 +1275,22 @@ EXTRACTION = {"Fiche négociation": ("dim_fournisseur", "nom"), "Références 80
 PAGES_ANNEXES = {"Détail article", "Références 80/20"}  # hors bandeau : ouvertes par bouton ou extraction
 
 
+def pods_extraction() -> list[dict]:
+    """Liaisons d'extraction au format report.json : liste « pods » au niveau du rapport, une par page cible.
+    Format relevé sur un report.json enregistré par Power BI Desktop (type 1 = extraction)."""
+    pods = []
+    for i, (nom, _) in enumerate(PAGES):
+        if nom in EXTRACTION:
+            t, c = EXTRACTION[nom]
+            champ = {"Column": {"Expression": {"SourceRef": {"Entity": t}}, "Property": c}}
+            pods.append({"boundSection": f"ReportSection{i:02d}", "config": "{}", "name": f"Liaison{i}",
+                         "parameters": json.dumps([{"name": f"Param{i}", "boundFilter": f"Extraction{i}",
+                                                    "fieldExpr": champ}], ensure_ascii=False),
+                         "type": 1})
+    assert all(isinstance(p["type"], int) for p in pods)
+    return pods
+
+
 def section_config(i: int, nom: str, visuels=None) -> tuple[str, str]:
     fond_page = {"background": [{"properties": {"color": {"solid": {"color": lit(FOND)}}, "transparency": lit(0)}}],
                  "outspace": [{"properties": {"color": {"solid": {"color": lit(FOND)}}, "transparency": lit(0)}}]}
@@ -1289,13 +1305,10 @@ def section_config(i: int, nom: str, visuels=None) -> tuple[str, str]:
         t, c = EXTRACTION[nom]
         champ = {"Column": {"Expression": {"SourceRef": {"Entity": t}}, "Property": c}}
         filtres.append({"name": f"Extraction{i}", "expression": champ, "type": "Categorical", "howCreated": 5})
-        # format report.json : énumérations numériques (BindingType Default=0, Drillthrough=1, Tooltip=2).
-        # Avec le texte "Drillthrough", Desktop ignore la liaison et le menu « Extraire » n'apparaît pas.
-        cfg["pageBinding"] = {"name": f"Liaison{i}", "type": 1,
-                              "parameters": [{"name": f"Param{i}", "boundFilter": f"Extraction{i}", "fieldExpr": champ}]}
+        # La liaison d'extraction ne va PAS dans la page : voir pods_extraction() (constaté sur un report.json écrit par Desktop)
     # garde-fou : report.json veut des énumérations numériques, un texte serait ignoré en silence par Desktop
     assert all(isinstance(f["howCreated"], int) for f in filtres), "howCreated doit être numérique"
-    assert isinstance(cfg.get("pageBinding", {}).get("type", 0), int), "pageBinding.type doit être numérique (1 = extraction)"
+    assert "pageBinding" not in cfg, "pageBinding est ignoré dans report.json : utiliser pods_extraction()"
     return json.dumps(cfg, ensure_ascii=False), json.dumps(filtres, ensure_ascii=False)
 
 THEME = {
@@ -1767,7 +1780,7 @@ def construire(dossier_donnees: str) -> None:
               "defaultDrillFilterOtherVisuals": True, "linguisticSchemaSyncVersion": 0,
               "settings": {"useNewFilterPaneExperience": True, "allowChangeFilterTypes": True,
                            "useStylableVisualContainerHeader": True, "exportDataMode": 1}, "objects": {}}
-    ecrire_json(RPT / "report.json", {"config": json.dumps(config), "layoutOptimization": 0,
+    ecrire_json(RPT / "report.json", {"config": json.dumps(config), "layoutOptimization": 0, "pods": pods_extraction(),
                                       "resourcePackages": [{"resourcePackage": {
                                           "disabled": False, "name": "RegisteredResources", "type": 1,
                                           "items": [{"name": "BuyveraTheme.json", "path": "BuyveraTheme.json",
