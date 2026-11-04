@@ -1,0 +1,9 @@
+// Retour du 04/11 : signal matière confirmé ou mixte, actions qui distinguent les fournisseurs
+EVALUATE
+ADDCOLUMNS ( FILTER ( VALUES ( dim_matiere[libelle] ), NOT ISBLANK ( [Variation 3 mois %] ) ),
+    "v3", [Variation 3 mois %], "v12", [Variation 12 mois %], "signal", [Alerte matière] )
+EVALUATE
+ADDCOLUMNS ( VALUES ( dim_fournisseur[nom] ),
+    "plafond", [Plafond justifié prochaine campagne %], "statut", CALCULATE ( [Statut fournisseur], param_campagne[campagne] = 2026 ),
+    "action", [Action fournisseur], "appro", [Conseil appro] )
+EVALUATE ROW ( "lecture", [Lecture 2027], "fraicheur", [Dernier indice chargé] )

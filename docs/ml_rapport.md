@@ -18,6 +18,8 @@ Backtest chronologique : 32 dates de départ (janvier 2024 → août 2026), 6 ma
 | 6 mois | naif | 11,4 % | — | 162 | **retenu** |
 | 6 mois | tendance_amortie | 12,4 % | 40 % | 162 |  |
 
+Pourquoi le naïf gagne : 6 séries mensuelles sur moins de 5 ans, soit quelques centaines de points, c'est trop peu pour qu'un modèle à arbres (LightGBM) apprenne autre chose que du bruit. Un « sens juste » proche de 50 % le confirme : sur des cours de métaux, le mois prochain ressemble surtout au dernier. La valeur utile est donc la **fourchette**, tirée des erreurs passées, qui sert de budget de hausse.
+
 Prévision depuis septembre 2026 et variation attendue pour la campagne 2027 (moyenne juillet-décembre 2026, dont juillet à septembre connus, vs même période 2025). Intervalle à 80 % tiré des erreurs du backtest.
 
 | matière | variation 2027 attendue | fourchette 80 % |
@@ -57,7 +59,7 @@ Prévision octobre 2026 → mars 2027 par famille, comparée à la même périod
 
 4 variables par fournisseur sur 3 campagnes : écart moyen, régularité de l'écart, part des campagnes en effet cliquet, taux de rattachement automatique. Nombre de segments choisi par la silhouette : **4** (k=2 : 0,40 ; k=3 : 0,44 ; k=4 : 0,61 ; k=5 : 0,54).
 
-Contrôle : accord avec le profil caché du générateur (indice de Rand ajusté) **1,0** (1 = identique, 0 = hasard). Sur données réelles, ce profil n'existe pas : le segment devient l'information.
+Contrôle : accord avec le profil caché du générateur (indice de Rand ajusté) **1,0** (1 = identique, 0 = hasard). Cet accord parfait vient du générateur, qui sépare nettement les profils. Test de robustesse, en ajoutant du bruit aux variables standardisées (30 tirages) : accord 0,75 avec un bruit d'écart-type 0,5 et 0,36 avec un bruit de 1. Sur données réelles, ce profil n'existe pas : le segment devient l'information, à valider avec l'acheteur.
 
 | fournisseur | segment trouvé | profil caché | écart moyen | campagnes en cliquet |
 |---|---|---|---|---|
@@ -76,9 +78,9 @@ Contrôle : accord avec le profil caché du générateur (indice de Rand ajusté
 
 ## 4. Lignes tarifaires anormales (Isolation Forest, campagne 2026)
 
-2 096 lignes comparées sur 4 variables (écart à la hausse justifiée, écart à la médiane de la famille, hausse demandée, poids de la ligne). 63 lignes isolées, dont **42 en hausse excessive**, pour 61 874 € d'écart.
+2 096 lignes comparées sur 4 variables (écart à la hausse justifiée, écart à la médiane de la famille, hausse demandée, poids de la ligne). 63 lignes isolées, dont **42 en écart non justifié** (hausse excessive ou baisse non répercutée), pour 61 874 € d'écart.
 
-Contrôle : 90% des lignes signalées viennent des fournisseurs opportunistes, contre 33% de toutes les lignes.
+Contrôle : 90% des lignes signalées viennent des fournisseurs opportunistes, contre 33% de toutes les lignes. Précision : 93% des lignes signalées dépassent vraiment la hausse justifiée de plus de 3 points ; elles ne couvrent que 6% de ces lignes (le modèle cible les cas les plus atypiques, pas tous les écarts).
 
 | article | fournisseur | demandée | justifiée | écart en € |
 |---|---|---|---|---|

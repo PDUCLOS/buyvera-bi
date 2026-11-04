@@ -131,7 +131,7 @@ table _Mesures
 		displayFolder: 1. Hausses
 		lineageTag: afd00639-4a12-5eaf-9c8d-225a4a499f5d
 
-	/// Σ par article de MAX(0, hausse demandée − hausse justifiée) × prix N × volume N.
+	/// Σ par article de MAX(0, hausse demandée − hausse justifiée) × prix N × volume N. Calculé ligne à ligne : un fournisseur conforme en moyenne peut avoir quelques références en écart, d'où des € chez un fournisseur « Conforme ».
 	measure '€ renégociables' = ```
 			VAR _c = [Campagne N+1]
 			VAR _w = [Fenêtre mois]
@@ -354,7 +354,7 @@ table _Mesures
 		displayFolder: 6. Négociation
 		lineageTag: c466a434-f02f-5724-b067-3464809f2a55
 
-	/// Couleur de statut de l'écart (rouge > 3 pts, orange > 1 pt, vert sinon) pour la mise en forme conditionnelle.
+	/// Couleur de statut de l'écart (ambre foncé > 3 pts, ambre > 1 pt, vert sinon) pour la mise en forme conditionnelle.
 	measure 'Couleur écart' = ```
 			VAR _e = [Écart pts]
 			RETURN
@@ -382,7 +382,7 @@ table _Mesures
 			VAR _min = TOPN ( 1, _t, [@v], ASC )
 			RETURN
 			    IF ( COUNTROWS ( _t ) > 0,
-			        MAXX ( _min, dim_matiere[libelle] & " " & FORMAT ( [@v], "+0.0 %;-0.0 %" ) ) )
+			        MAXX ( _min, dim_matiere[libelle] & " " & FORMAT ( [@v], "+0.0 %;-0.0 %" ) & " (fenêtre de la campagne)" ) )
 			```
 		displayFolder: 6. Négociation
 		lineageTag: 54cab73d-33eb-5d4b-ad60-31aa24743800
@@ -399,7 +399,8 @@ table _Mesures
 			RETURN
 			    IF ( ISBLANK ( _f ), "Choisissez un fournisseur pour générer sa fiche.",
 			        "Demande " & FORMAT ( _d, "+0.0 %;-0.0 %" ) & " pour " & FORMAT ( _j, "+0.0 %;-0.0 %" ) & " justifiés"
-			            & IF ( _eur > 0, " · à renégocier " & FORMAT ( _eur, "# ##0 €" ), " · conforme" )
+			            & IF ( _e > 1, " · à renégocier " & FORMAT ( _eur, "# ##0 €" ),
+			                " · conforme globalement" & IF ( _eur > 0, " (écarts ligne à ligne : " & FORMAT ( _eur, "# ##0 €" ) & ")", "" ) )
 			            & IF ( NOT ISBLANK ( _lev ), " · levier " & _lev, "" )
 			            & IF ( _cli > 0, " · cliquet " & _cli & " camp.", "" ) )
 			```
@@ -446,20 +447,27 @@ table _Mesures
 		displayFolder: 7. Alertes
 		lineageTag: 97bb800a-ac19-5733-ba34-dd5e5b030947
 
-	/// Signal sur 3 mois : ▲ hausse > 5 % (le fournisseur va s'en servir), ▼ baisse > 5 % (levier acheteur), ● stable.
+	/// Signal 3 mois confirmé par la tendance 12 mois. ▲ hausse > 5 % sur 3 mois et 12 mois ≥ 0 ; ▼ baisse > 5 % sur 3 mois et 12 mois ≤ 0 (convoquer) ; ◆ signal mixte quand les deux fenêtres se contredisent ; ● stable.
 	measure 'Alerte matière' = ```
-			VAR _v = [Variation 3 mois %]
+			VAR _v3 = [Variation 3 mois %]
+			VAR _v12 = [Variation 12 mois %]
 			RETURN
-			    SWITCH ( TRUE (), ISBLANK ( _v ), BLANK (), _v > 0.05, "▲ Hausse : à anticiper", _v < -0.05, "▼ Baisse : convoquer le fournisseur", "● Stable" )
+			    SWITCH ( TRUE (), ISBLANK ( _v3 ), BLANK (),
+			        _v3 > 0.05 && _v12 >= 0, "▲ Hausse 3 et 12 mois : anticiper",
+			        _v3 < -0.05 && _v12 <= 0, "▼ Baisse 3 et 12 mois : convoquer",
+			        ABS ( _v3 ) > 0.05, "◆ Signal mixte : 3 mois " & IF ( _v3 > 0, "▲", "▼" ) & ", 12 mois " & IF ( _v12 > 0, "▲", "▼" ),
+			        "● Stable sur 3 mois" )
 			```
 		displayFolder: 7. Alertes
 		lineageTag: f66f27ac-300f-5ae5-87e4-443967d9b651
 
-	/// Couleur du signal matière (rouge = hausse, vert = baisse, gris = stable).
+	/// Couleur du signal matière (ambre = hausse, vert = baisse confirmée, ambre clair = mixte, gris = stable).
 	measure 'Couleur alerte' = ```
-			VAR _v = [Variation 3 mois %]
+			VAR _v3 = [Variation 3 mois %]
+			VAR _v12 = [Variation 12 mois %]
 			RETURN
-			    SWITCH ( TRUE (), ISBLANK ( _v ), "#56655F", _v > 0.05, "#C9781C", _v < -0.05, "#0F5C4A", "#56655F" )
+			    SWITCH ( TRUE (), ISBLANK ( _v3 ), "#56655F",
+			        _v3 > 0.05 && _v12 >= 0, "#C9781C", _v3 < -0.05 && _v12 <= 0, "#0F5C4A", ABS ( _v3 ) > 0.05, "#B08A2E", "#56655F" )
 			```
 		displayFolder: 7. Alertes
 		lineageTag: 94b0a706-6259-5c22-94d4-1175caabfd98
@@ -529,23 +537,28 @@ table _Mesures
 		displayFolder: 7. Alertes
 		lineageTag: 564885b6-6f55-59dd-9e3e-028c55b1b998
 
-	/// Action recommandée selon le plafond justifié de la prochaine campagne : baisse → convoquer le fournisseur, hausse > 2 % → préparer la défense, sinon suivi.
+	/// Action selon le plafond de la prochaine campagne et l'écart du fournisseur sur la dernière : baisse → convoquer ; écart > 3 pts → exiger le détail matière ; > 1 pt → plafonner au justifié ; sinon accepter jusqu'au plafond.
 	measure 'Action fournisseur' = ```
 			VAR _p = [Plafond justifié prochaine campagne %]
+			VAR _c = MAXX ( ALL ( param_campagne[campagne] ), param_campagne[campagne] )
+			VAR _e = CALCULATE ( [Écart pts], param_campagne[campagne] = _c )
 			RETURN
 			    SWITCH ( TRUE (), ISBLANK ( _p ), BLANK (),
-			        _p < 0, "▼ Convoquer le fournisseur",
-			        _p > 0.02, "▲ Préparer la défense",
-			        "● Suivi" )
+			        _p < 0, "▼ Convoquer : baisse à obtenir",
+			        _e > 3, "▲ Exiger le détail matière",
+			        _e > 1, "◆ Plafonner à " & FORMAT ( _p, "+0.0 %" ),
+			        "● Accepter jusqu'à " & FORMAT ( _p, "+0.0 %" ) )
 			```
 		displayFolder: 7. Alertes
 		lineageTag: 2af1133a-157a-53d9-9be0-d8be6ad9cf46
 
-	/// Vert = baisse à obtenir, rouge = hausse à cadrer, gris = suivi.
+	/// Vert = baisse à obtenir, ambre = fournisseur en écart, ambre clair = à surveiller, gris = accepter.
 	measure 'Couleur action' = ```
 			VAR _p = [Plafond justifié prochaine campagne %]
+			VAR _c = MAXX ( ALL ( param_campagne[campagne] ), param_campagne[campagne] )
+			VAR _e = CALCULATE ( [Écart pts], param_campagne[campagne] = _c )
 			RETURN
-			    SWITCH ( TRUE (), ISBLANK ( _p ), "#56655F", _p < 0, "#0F5C4A", _p > 0.02, "#C9781C", "#56655F" )
+			    SWITCH ( TRUE (), ISBLANK ( _p ), "#56655F", _p < 0, "#0F5C4A", _e > 3, "#C9781C", _e > 1, "#B08A2E", "#56655F" )
 			```
 		displayFolder: 7. Alertes
 		lineageTag: 0d4af545-fdcd-54c9-aa59-fe646b8f2dd9
@@ -623,7 +636,7 @@ table _Mesures
 	measure 'Dernier indice chargé' = ```
 			VAR _d = CALCULATE ( MAX ( fact_indice[date] ), REMOVEFILTERS ( fact_indice ), REMOVEFILTERS ( dim_date ) )
 			RETURN
-			    "Indices INSEE à fin " & FORMAT ( _d, "mmmm yyyy" )
+			    "INSEE réel · " & FORMAT ( _d, "mmm yyyy" ) & " · tarifs fictifs" 
 			```
 		displayFolder: 2. Matières
 		lineageTag: bcb2db07-0c53-5d4e-8c8f-e06673eeba45
@@ -695,6 +708,29 @@ table _Mesures
 		formatString: +0.0%;-0.0%;0.0%
 		displayFolder: 3. Achats
 		lineageTag: 050998b6-d2c0-5d32-9f2a-6bad77ccc23c
+
+	/// Ce que l'évolution du montant ne doit ni aux volumes ni aux prix : changement du panier acheté (plus ou moins d'articles chers).
+	measure 'Effet mix %' = ```
+			VAR _m = [Évol. montant %]
+			VAR _v = [Évol. volume %]
+			VAR _p = [Effet prix %]
+			RETURN
+			    IF ( NOT ISBLANK ( _m ) && NOT ISBLANK ( _v ) && NOT ISBLANK ( _p ), DIVIDE ( 1 + _m, ( 1 + _v ) * ( 1 + _p ) ) - 1 )
+			```
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: 3. Achats
+		lineageTag: 2b671dd4-2903-5b14-bd56-c52811d7166b
+
+	/// Décomposition lisible du montant : volumes × prix × mix.
+	measure 'Lecture prix volumes' = ```
+			VAR _f = "+0.0 %;-0.0 %"
+			RETURN
+			    "Montant " & FORMAT ( [Évol. montant %], _f ) & " = volumes " & FORMAT ( [Évol. volume %], _f ) & " × prix "
+			        & FORMAT ( [Effet prix %], _f ) & " × effet mix " & FORMAT ( [Effet mix %], _f )
+			        & " (le mix : on achète plus, ou moins, d'articles chers)." 
+			```
+		displayFolder: 3. Achats
+		lineageTag: f58849a6-9da0-5dbd-81e3-945bddc376c1
 
 	/// Euros payés en plus par la seule hausse de prix, à volumes constants.
 	measure 'Surcoût prix €' = ```
@@ -781,6 +817,16 @@ table _Mesures
 		displayFolder: 10. Prévisions ML
 		lineageTag: 20245ac0-4530-540f-bef9-39e10667dc21
 
+	/// Relie la variation des matières et la hausse justifiable : les matières ne pèsent qu'une partie du prix.
+	measure 'Lecture 2027' = ```
+			VAR _m = CALCULATE ( AVERAGE ( ml_variation_2027[variation_centrale] ), REMOVEFILTERS ( ml_variation_2027 ) )
+			RETURN
+			    "Matières " & FORMAT ( _m, "+0 %" ) & " en moyenne, mais une part du prix seulement : "
+			        & FORMAT ( [Plafond 2027 projeté %], "+0.0 %" ) & " justifiables" 
+			```
+		displayFolder: 10. Prévisions ML
+		lineageTag: dd92e411-6363-56cf-ade1-7a2069d2e353
+
 	/// Fourchette à 80 % du plafond 2027 projeté.
 	measure 'Fourchette plafond 2027' = ```
 			VAR _w = SUM ( ml_plafond_2027[poids] )
@@ -803,7 +849,7 @@ table _Mesures
 		displayFolder: 10. Prévisions ML
 		lineageTag: 9dd94ac2-ebf5-58f0-84d4-2cfaccd4824d
 
-	/// Lignes du tarif 2026 isolées en hausse excessive.
+	/// Lignes du tarif 2026 isolées en écart non justifié (hausse excessive ou baisse non répercutée).
 	measure 'Lignes anormales' = CALCULATE ( COUNTROWS ( ml_anomalies_tarif ), ml_anomalies_tarif[anomalie] = TRUE (), ml_anomalies_tarif[ecart] > 0 )
 		formatString: #,0
 		displayFolder: 10. Prévisions ML
@@ -839,7 +885,7 @@ table _Mesures
 		displayFolder: 11. Groupe
 		lineageTag: 92cab244-4a89-5353-8001-22f546f2783b
 
-	/// Surcoût vs meilleur prix groupe / montant payé.
+	/// Surcoût vs meilleur prix groupe / montant payé par les sites sur la période filtrée (64 M€ sur 2023-2026).
 	measure '% surcoût groupe' = DIVIDE ( [Surcoût vs meilleur prix groupe], [Montant payé] )
 		formatString: 0.0%
 		displayFolder: 11. Groupe
@@ -863,7 +909,12 @@ table _Mesures
 		displayFolder: 11. Groupe
 		lineageTag: e4ee5bc0-858d-5a1a-adc1-ca38e542dd25
 
-	/// Somme des écarts d'application défavorables (payé au-dessus du tarif).
+	/// Ambre si l'écart net est défavorable (payé au-dessus du tarif), vert sinon.
+	measure 'Couleur écart application' = IF ( [Écart d'application €] > 0, "#C9781C", "#0F5C4A" )
+		displayFolder: 11. Groupe
+		lineageTag: 417db863-145f-5c3b-a783-2c372c2db97c
+
+	/// Brut : somme des seules lignes défavorables (payé au-dessus du tarif), sans compenser les lignes favorables.
 	measure 'Payé en trop (application)' = SUMX ( FILTER ( fact_achats_entite, fact_achats_entite[ecart_application] > 0 ), fact_achats_entite[ecart_application] )
 		formatString: #,0 €
 		displayFolder: 11. Groupe
@@ -898,39 +949,40 @@ table _Mesures
 
 	/// Hausse demandée, pondérée par la valeur N.
 	measure 'Hausse demandée (négo) %' = DIVIDE ( SUMX ( fact_negociation, fact_negociation[valeur_n] * fact_negociation[hausse_demandee] ), SUM ( fact_negociation[valeur_n] ) )
-		formatString: +0.0%;-0.0%;0.0%
+		formatString: +0.00%;-0.00%;0.00%
 		displayFolder: 12. Gains
 		lineageTag: e0af0dac-c9f0-58c6-a1af-0fd50a131046
 
 	/// Hausse finalement accordée, pondérée par la valeur N.
 	measure 'Hausse obtenue %' = DIVIDE ( SUMX ( fact_negociation, fact_negociation[valeur_n] * fact_negociation[hausse_obtenue] ), SUM ( fact_negociation[valeur_n] ) )
-		formatString: +0.0%;-0.0%;0.0%
+		formatString: +0.00%;-0.00%;0.00%
 		displayFolder: 12. Gains
 		lineageTag: a5056ebe-62be-5427-8428-5d61253b3e73
 
 	/// Hausse justifiée par les matières, pondérée par la valeur N.
 	measure 'Hausse justifiée (négo) %' = DIVIDE ( SUMX ( fact_negociation, fact_negociation[valeur_n] * fact_negociation[hausse_justifiee] ), SUM ( fact_negociation[valeur_n] ) )
-		formatString: +0.0%;-0.0%;0.0%
+		formatString: +0.00%;-0.00%;0.00%
 		displayFolder: 12. Gains
 		lineageTag: 6a0b78ba-c045-5fa6-adb8-715f852cae42
 
-	/// Conseil d'approvisionnement avant la prochaine campagne : baisse matière → limiter les achats et attendre le nouveau tarif ; hausse > 3 % → anticiper les achats avant le 1er janvier.
+	/// Conseil d'approvisionnement avant la prochaine campagne, selon le plafond justifié : < 0 → attendre le nouveau tarif ; > 12 % → anticiper les achats avant le 1er janvier ; 6 à 12 % → anticiper sur les références clés ; sinon normal.
 	measure 'Conseil appro' = ```
 			VAR _p = [Plafond justifié prochaine campagne %]
 			RETURN
 			    SWITCH ( TRUE (), ISBLANK ( _p ), BLANK (),
-			        _p < 0, "▼ Limiter les achats, attendre la baisse",
-			        _p > 0.03, "▲ Anticiper les achats",
-			        "● Achats normaux" )
+			        _p < 0, "▼ Attendre la baisse",
+			        _p > 0.12, "▲ Anticiper",
+			        _p > 0.06, "◆ Anticiper les réf. clés",
+			        "● Normal" )
 			```
 		displayFolder: 7. Alertes
 		lineageTag: 9b49e1d0-595e-53a5-8a33-f18f3aa6e6fb
 
-	/// Vert = attendre la baisse, rouge = anticiper avant la hausse, gris = normal.
+	/// Vert = attendre la baisse, ambre = anticiper, ambre clair = références clés, gris = normal.
 	measure 'Couleur conseil' = ```
 			VAR _p = [Plafond justifié prochaine campagne %]
 			RETURN
-			    SWITCH ( TRUE (), ISBLANK ( _p ), "#56655F", _p < 0, "#0F5C4A", _p > 0.03, "#C9781C", "#56655F" )
+			    SWITCH ( TRUE (), ISBLANK ( _p ), "#56655F", _p < 0, "#0F5C4A", _p > 0.12, "#C9781C", _p > 0.06, "#B08A2E", "#56655F" )
 			```
 		displayFolder: 7. Alertes
 		lineageTag: 5a6e3302-8043-51ec-bdb7-03864b704d79

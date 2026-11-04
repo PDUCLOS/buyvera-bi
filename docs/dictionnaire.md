@@ -2,7 +2,7 @@
 
 Généré par `scripts/export_dictionary.py` depuis le modèle TMDL (`pbip/BuyveraBI.SemanticModel`). Ne pas modifier à la main.
 
-26 tables · 138 colonnes · 99 mesures · 26 relations · 2 rôles
+26 tables · 138 colonnes · 103 mesures · 26 relations · 2 rôles
 
 ## Sommaire
 
@@ -83,7 +83,7 @@ Toutes de plusieurs vers un, filtrage dans un seul sens.
 | Hausse demandée % | `0.0%` | Σ (prix N+1 × volume N) / Σ (prix N × volume N) − 1, pondérée par les volumes N. |
 | Hausse justifiée % | `0.0%` | Σ (part matière × variation matière), non matière à 2 %/an comprise, pondérée comme la hausse demandée. |
 | Écart pts | `+0.0;-0.0;0.0` | Hausse demandée − hausse justifiée, en points de pourcentage. |
-| € renégociables | `#,0 €` | Σ par article de MAX(0, hausse demandée − hausse justifiée) × prix N × volume N. |
+| € renégociables | `#,0 €` | Σ par article de MAX(0, hausse demandée − hausse justifiée) × prix N × volume N. Calculé ligne à ligne : un fournisseur conforme en moyenne peut avoir quelques références en écart, d'où des € chez un fournisseur « Conforme ». |
 | Nb articles comparables | `#,0` | Articles du panier comparable N / N+1. |
 | Effet cliquet | `0` | Nombre de campagnes où la hausse justifiée est négative alors que la hausse demandée ne l'est pas. |
 
@@ -97,10 +97,11 @@ Toutes de plusieurs vers un, filtrage dans un seul sens.
 | Variation 2027 attendue % | `+0.0%;-0.0%;0.0%` | Variation matière attendue pour 2027 (fenêtre juillet-décembre 2026 complétée par la prévision). |
 | Fourchette 2027 | `` | Fourchette à 80 % de la variation 2027 attendue. |
 | Plafond 2027 projeté % | `+0.0%;-0.0%;0.0%` | Hausse justifiable 2027 projetée, pondérée par prix 2026 × volume 2025. |
+| Lecture 2027 | `` | Relie la variation des matières et la hausse justifiable : les matières ne pèsent qu'une partie du prix. |
 | Fourchette plafond 2027 | `` | Fourchette à 80 % du plafond 2027 projeté. |
 | Segment ML | `` | Segment de comportement tarifaire du fournisseur (KMeans). |
 | Écart moyen 3 campagnes (pts) | `+0.0;-0.0;0.0` | Écart moyen demandé − justifié sur 3 campagnes. |
-| Lignes anormales | `#,0` | Lignes du tarif 2026 isolées en hausse excessive. |
+| Lignes anormales | `#,0` | Lignes du tarif 2026 isolées en écart non justifié (hausse excessive ou baisse non répercutée). |
 | € lignes anormales | `#,0 €` | Écart en euros des lignes isolées en hausse excessive. |
 | Demandée (ligne) % | `+0.0%;-0.0%;0.0%` | Hausse demandée de la ligne. |
 | Justifiée (ligne) % | `+0.0%;-0.0%;0.0%` | Hausse justifiée de la ligne. |
@@ -111,11 +112,12 @@ Toutes de plusieurs vers un, filtrage dans un seul sens.
 |---|---|---|
 | Montant payé | `#,0 €` | Quantités × prix payé dans l'ERP des sites. |
 | Surcoût vs meilleur prix groupe | `#,0 €` | Ce que les sites paient au-dessus du meilleur prix obtenu par un site du groupe pour le même article la même année. |
-| % surcoût groupe | `0.0%` | Surcoût vs meilleur prix groupe / montant payé. |
+| % surcoût groupe | `0.0%` | Surcoût vs meilleur prix groupe / montant payé par les sites sur la période filtrée (64 M€ sur 2023-2026). |
 | Prix payé moyen | `#,0.00 €` | Montant payé / quantité. |
 | Meilleur prix groupe | `#,0.00 €` | Meilleur prix moyen payé par un site du groupe pour l'article et l'année, pondéré par les quantités achetées. |
 | Écart d'application € | `+#,0 €;-#,0 €;0 €` | Prix payé − prix du tarif, sur les lignes où l'ERP n'applique pas le tarif : positif = payé trop cher. |
-| Payé en trop (application) | `#,0 €` | Somme des écarts d'application défavorables (payé au-dessus du tarif). |
+| Couleur écart application | `` | Ambre si l'écart net est défavorable (payé au-dessus du tarif), vert sinon. |
+| Payé en trop (application) | `#,0 €` | Brut : somme des seules lignes défavorables (payé au-dessus du tarif), sans compenser les lignes favorables. |
 | Articles en écart d'application | `#,0` | Articles avec au moins une ligne en retard ou en écart durable. |
 
 ### 12. Gains
@@ -125,9 +127,9 @@ Toutes de plusieurs vers un, filtrage dans un seul sens.
 | Économies obtenues € | `#,0 €` | Hausse refusée au fournisseur × valeur N : ce que la négociation a réellement rapporté. |
 | Potentiel renégociable € | `#,0 €` | € renégociables des campagnes (écart à la hausse justifiée). |
 | Taux de transformation | `0%` | Économies obtenues / potentiel renégociable. |
-| Hausse demandée (négo) % | `+0.0%;-0.0%;0.0%` | Hausse demandée, pondérée par la valeur N. |
-| Hausse obtenue % | `+0.0%;-0.0%;0.0%` | Hausse finalement accordée, pondérée par la valeur N. |
-| Hausse justifiée (négo) % | `+0.0%;-0.0%;0.0%` | Hausse justifiée par les matières, pondérée par la valeur N. |
+| Hausse demandée (négo) % | `+0.00%;-0.00%;0.00%` | Hausse demandée, pondérée par la valeur N. |
+| Hausse obtenue % | `+0.00%;-0.00%;0.00%` | Hausse finalement accordée, pondérée par la valeur N. |
+| Hausse justifiée (négo) % | `+0.00%;-0.00%;0.00%` | Hausse justifiée par les matières, pondérée par la valeur N. |
 
 ### 13. 80/20
 
@@ -162,6 +164,8 @@ Toutes de plusieurs vers un, filtrage dans un seul sens.
 | Évol. volume % | `+0.0%;-0.0%;0.0%` | Quantités vs même période N-1. |
 | Évol. montant % | `+0.0%;-0.0%;0.0%` | Montant des achats vs même période N-1. |
 | Effet prix % | `+0.0%;-0.0%;0.0%` | Hausse de prix subie à volumes constants : Σ qté × (prix N − prix N-1) / Σ qté × prix N-1, sur les articles achetés les deux années. |
+| Effet mix % | `+0.0%;-0.0%;0.0%` | Ce que l'évolution du montant ne doit ni aux volumes ni aux prix : changement du panier acheté (plus ou moins d'articles chers). |
+| Lecture prix volumes | `` | Décomposition lisible du montant : volumes × prix × mix. |
 | Surcoût prix € | `#,0 €` | Euros payés en plus par la seule hausse de prix, à volumes constants. |
 
 ### 4. Rattachement
@@ -187,7 +191,7 @@ Toutes de plusieurs vers un, filtrage dans un seul sens.
 |---|---|---|
 | Hausse acceptée % | `0.0%` | Hausse acceptée par l'acheteur (segment du simulateur, 2 % par défaut). |
 | € économisés (contre-proposition) | `#,0 €` | Σ par article de MAX(0, hausse demandée − hausse acceptée) × prix N × volume N : gain si le fournisseur accepte la contre-proposition. |
-| Couleur écart | `` | Couleur de statut de l'écart (rouge > 3 pts, orange > 1 pt, vert sinon) pour la mise en forme conditionnelle. |
+| Couleur écart | `` | Couleur de statut de l'écart (ambre foncé > 3 pts, ambre > 1 pt, vert sinon) pour la mise en forme conditionnelle. |
 | Statut fournisseur | `` | Statut lisible (icône + libellé) : À renégocier, À surveiller ou Conforme. |
 | Levier matière | `` | Matière du panier du fournisseur qui a le plus baissé sur la fenêtre : argument de négociation. |
 | Commentaire négociation | `` | Phrase de synthèse générée pour le fournisseur sélectionné (support de négociation). |
@@ -204,18 +208,18 @@ Toutes de plusieurs vers un, filtrage dans un seul sens.
 | Dernier indice | `#,0.0` | Valeur de l'indice au dernier mois disponible. |
 | Variation 3 mois % | `+0.0%;-0.0%;0.0%` | Dernier indice / indice 3 mois plus tôt − 1 (signal court terme). |
 | Variation 12 mois % | `+0.0%;-0.0%;0.0%` | Dernier indice / indice 12 mois plus tôt − 1 (tendance). |
-| Alerte matière | `` | Signal sur 3 mois : ▲ hausse > 5 % (le fournisseur va s'en servir), ▼ baisse > 5 % (levier acheteur), ● stable. |
-| Couleur alerte | `` | Couleur du signal matière (rouge = hausse, vert = baisse, gris = stable). |
+| Alerte matière | `` | Signal 3 mois confirmé par la tendance 12 mois. ▲ hausse > 5 % sur 3 mois et 12 mois ≥ 0 ; ▼ baisse > 5 % sur 3 mois et 12 mois ≤ 0 (convoquer) ; ◆ signal mixte quand les deux fenêtres se contredisent ; ● stable. |
+| Couleur alerte | `` | Couleur du signal matière (ambre = hausse, vert = baisse confirmée, ambre clair = mixte, gris = stable). |
 | Variation anticipée % | `+0.0%;-0.0%;0.0%` | Moyenne des 6 derniers mois disponibles / moyenne des 6 mois avant la dernière campagne − 1 : variation déjà acquise pour la prochaine campagne. |
 | Plafond justifié prochaine campagne % | `+0.0%;-0.0%;0.0%` | Hausse que les matières justifient déjà pour la prochaine campagne, sur le tarif en vigueur pondéré par les volumes : au-delà, la demande est contestable. |
 | Impact € prochaine campagne | `#,0 €` | Surcoût que les matières justifient déjà pour la prochaine campagne (Σ part × variation acquise × prix × volume). Si une matière est sélectionnée, seule sa contribution est comptée : articles impactés par cette matière. |
 | Volume annuel | `#,0` | Quantité achetée sur la dernière année complète. |
-| Action fournisseur | `` | Action recommandée selon le plafond justifié de la prochaine campagne : baisse → convoquer le fournisseur, hausse > 2 % → préparer la défense, sinon suivi. |
-| Couleur action | `` | Vert = baisse à obtenir, rouge = hausse à cadrer, gris = suivi. |
+| Action fournisseur | `` | Action selon le plafond de la prochaine campagne et l'écart du fournisseur sur la dernière : baisse → convoquer ; écart > 3 pts → exiger le détail matière ; > 1 pt → plafonner au justifié ; sinon accepter jusqu'au plafond. |
+| Couleur action | `` | Vert = baisse à obtenir, ambre = fournisseur en écart, ambre clair = à surveiller, gris = accepter. |
 | Prochaine campagne | `0` | Campagne à venir (dernière campagne + 1). |
 | Argument anticipé | `` | Phrase d'anticipation : plafond de hausse défendable pour la prochaine campagne, avant réception du tarif. |
-| Conseil appro | `` | Conseil d'approvisionnement avant la prochaine campagne : baisse matière → limiter les achats et attendre le nouveau tarif ; hausse > 3 % → anticiper les achats avant le 1er janvier. |
-| Couleur conseil | `` | Vert = attendre la baisse, rouge = anticiper avant la hausse, gris = normal. |
+| Conseil appro | `` | Conseil d'approvisionnement avant la prochaine campagne, selon le plafond justifié : < 0 → attendre le nouveau tarif ; > 12 % → anticiper les achats avant le 1er janvier ; 6 à 12 % → anticiper sur les références clés ; sinon normal. |
+| Couleur conseil | `` | Vert = attendre la baisse, ambre = anticiper, ambre clair = références clés, gris = normal. |
 
 ### 8. Décalage
 

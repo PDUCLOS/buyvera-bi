@@ -388,7 +388,8 @@ VAR _j = [Hausse justifiée %]
 RETURN
     IF ( NOT ISBLANK ( _d ) && NOT ISBLANK ( _j ), ( _d - _j ) * 100 )"""),
     ("€ renégociables", "1. Hausses", "#,0 €",
-     "Σ par article de MAX(0, hausse demandée − hausse justifiée) × prix N × volume N.",
+     "Σ par article de MAX(0, hausse demandée − hausse justifiée) × prix N × volume N. Calculé ligne à ligne : un fournisseur "
+     "conforme en moyenne peut avoir quelques références en écart, d'où des € chez un fournisseur « Conforme ».",
      PANIER_JUSTIFIE + """
 RETURN
     SUMX ( _panierJ, MAX ( 0, DIVIDE ( [@pN1], [@pN] ) - 1 - [@j] ) * [@pN] * [@vN] )"""),
@@ -483,7 +484,7 @@ RETURN
 RETURN
     SUMX ( _panier, MAX ( 0, DIVIDE ( [@pN1], [@pN] ) - 1 - _acc ) * [@pN] * [@vN] )"""),
     ("Couleur écart", "6. Négociation", "",
-     "Couleur de statut de l'écart (rouge > 3 pts, orange > 1 pt, vert sinon) pour la mise en forme conditionnelle.",
+     "Couleur de statut de l'écart (ambre foncé > 3 pts, ambre > 1 pt, vert sinon) pour la mise en forme conditionnelle.",
      """VAR _e = [Écart pts]
 RETURN
     SWITCH ( TRUE (), ISBLANK ( _e ), "#56655F", _e > 3, "#C9781C", _e > 1, "#D9A441", "#0F5C4A" )"""),
@@ -502,7 +503,7 @@ RETURN
 VAR _min = TOPN ( 1, _t, [@v], ASC )
 RETURN
     IF ( COUNTROWS ( _t ) > 0,
-        MAXX ( _min, dim_matiere[libelle] & " " & FORMAT ( [@v], "+0.0 %;-0.0 %" ) ) )"""),
+        MAXX ( _min, dim_matiere[libelle] & " " & FORMAT ( [@v], "+0.0 %;-0.0 %" ) & " (fenêtre de la campagne)" ) )"""),
     ("Commentaire négociation", "6. Négociation", "",
      "Phrase de synthèse générée pour le fournisseur sélectionné (support de négociation).",
      """VAR _f = SELECTEDVALUE ( dim_fournisseur[nom] )
@@ -515,7 +516,8 @@ VAR _cli = [Effet cliquet]
 RETURN
     IF ( ISBLANK ( _f ), "Choisissez un fournisseur pour générer sa fiche.",
         "Demande " & FORMAT ( _d, "+0.0 %;-0.0 %" ) & " pour " & FORMAT ( _j, "+0.0 %;-0.0 %" ) & " justifiés"
-            & IF ( _eur > 0, " · à renégocier " & FORMAT ( _eur, "# ##0 €" ), " · conforme" )
+            & IF ( _e > 1, " · à renégocier " & FORMAT ( _eur, "# ##0 €" ),
+                " · conforme globalement" & IF ( _eur > 0, " (écarts ligne à ligne : " & FORMAT ( _eur, "# ##0 €" ) & ")", "" ) )
             & IF ( NOT ISBLANK ( _lev ), " · levier " & _lev, "" )
             & IF ( _cli > 0, " · cliquet " & _cli & " camp.", "" ) )"""),
 
@@ -542,14 +544,22 @@ VAR _r = DIVIDE ( _v1, _v0 )
 RETURN
     IF ( HASONEVALUE ( dim_matiere[matiere_id] ) && _compo && NOT ISBLANK ( _r ), _r - 1 )"""),
     ("Alerte matière", "7. Alertes", "",
-     "Signal sur 3 mois : ▲ hausse > 5 % (le fournisseur va s'en servir), ▼ baisse > 5 % (levier acheteur), ● stable.",
-     """VAR _v = [Variation 3 mois %]
+     "Signal 3 mois confirmé par la tendance 12 mois. ▲ hausse > 5 % sur 3 mois et 12 mois ≥ 0 ; ▼ baisse > 5 % sur 3 mois et "
+     "12 mois ≤ 0 (convoquer) ; ◆ signal mixte quand les deux fenêtres se contredisent ; ● stable.",
+     """VAR _v3 = [Variation 3 mois %]
+VAR _v12 = [Variation 12 mois %]
 RETURN
-    SWITCH ( TRUE (), ISBLANK ( _v ), BLANK (), _v > 0.05, "▲ Hausse : à anticiper", _v < -0.05, "▼ Baisse : convoquer le fournisseur", "● Stable" )"""),
-    ("Couleur alerte", "7. Alertes", "", "Couleur du signal matière (rouge = hausse, vert = baisse, gris = stable).",
-     """VAR _v = [Variation 3 mois %]
+    SWITCH ( TRUE (), ISBLANK ( _v3 ), BLANK (),
+        _v3 > 0.05 && _v12 >= 0, "▲ Hausse 3 et 12 mois : anticiper",
+        _v3 < -0.05 && _v12 <= 0, "▼ Baisse 3 et 12 mois : convoquer",
+        ABS ( _v3 ) > 0.05, "◆ Signal mixte : 3 mois " & IF ( _v3 > 0, "▲", "▼" ) & ", 12 mois " & IF ( _v12 > 0, "▲", "▼" ),
+        "● Stable sur 3 mois" )"""),
+    ("Couleur alerte", "7. Alertes", "", "Couleur du signal matière (ambre = hausse, vert = baisse confirmée, ambre clair = mixte, gris = stable).",
+     """VAR _v3 = [Variation 3 mois %]
+VAR _v12 = [Variation 12 mois %]
 RETURN
-    SWITCH ( TRUE (), ISBLANK ( _v ), "#56655F", _v > 0.05, "#C9781C", _v < -0.05, "#0F5C4A", "#56655F" )"""),
+    SWITCH ( TRUE (), ISBLANK ( _v3 ), "#56655F",
+        _v3 > 0.05 && _v12 >= 0, "#C9781C", _v3 < -0.05 && _v12 <= 0, "#0F5C4A", ABS ( _v3 ) > 0.05, "#B08A2E", "#56655F" )"""),
     ("Variation anticipée %", "7. Alertes", "+0.0%;-0.0%;0.0%",
      "Moyenne des 6 derniers mois disponibles / moyenne des 6 mois avant la dernière campagne − 1 : variation déjà acquise pour la prochaine campagne.",
      """VAR _last = CALCULATE ( MAX ( fact_indice[date] ), ALL ( fact_indice ) )
@@ -622,17 +632,23 @@ RETURN
 RETURN
     CALCULATE ( SUM ( fact_achats[quantite] ), REMOVEFILTERS ( dim_date ), dim_date[annee] = _cBase - 1 )"""),
     ("Action fournisseur", "7. Alertes", "",
-     "Action recommandée selon le plafond justifié de la prochaine campagne : baisse → convoquer le fournisseur, hausse > 2 % → préparer la défense, sinon suivi.",
+     "Action selon le plafond de la prochaine campagne et l'écart du fournisseur sur la dernière : baisse → convoquer ; "
+     "écart > 3 pts → exiger le détail matière ; > 1 pt → plafonner au justifié ; sinon accepter jusqu'au plafond.",
      """VAR _p = [Plafond justifié prochaine campagne %]
+VAR _c = MAXX ( ALL ( param_campagne[campagne] ), param_campagne[campagne] )
+VAR _e = CALCULATE ( [Écart pts], param_campagne[campagne] = _c )
 RETURN
     SWITCH ( TRUE (), ISBLANK ( _p ), BLANK (),
-        _p < 0, "▼ Convoquer le fournisseur",
-        _p > 0.02, "▲ Préparer la défense",
-        "● Suivi" )"""),
-    ("Couleur action", "7. Alertes", "", "Vert = baisse à obtenir, rouge = hausse à cadrer, gris = suivi.",
+        _p < 0, "▼ Convoquer : baisse à obtenir",
+        _e > 3, "▲ Exiger le détail matière",
+        _e > 1, "◆ Plafonner à " & FORMAT ( _p, "+0.0 %" ),
+        "● Accepter jusqu'à " & FORMAT ( _p, "+0.0 %" ) )"""),
+    ("Couleur action", "7. Alertes", "", "Vert = baisse à obtenir, ambre = fournisseur en écart, ambre clair = à surveiller, gris = accepter.",
      """VAR _p = [Plafond justifié prochaine campagne %]
+VAR _c = MAXX ( ALL ( param_campagne[campagne] ), param_campagne[campagne] )
+VAR _e = CALCULATE ( [Écart pts], param_campagne[campagne] = _c )
 RETURN
-    SWITCH ( TRUE (), ISBLANK ( _p ), "#56655F", _p < 0, "#0F5C4A", _p > 0.02, "#C9781C", "#56655F" )"""),
+    SWITCH ( TRUE (), ISBLANK ( _p ), "#56655F", _p < 0, "#0F5C4A", _e > 3, "#C9781C", _e > 1, "#B08A2E", "#56655F" )"""),
     ("Décalage estimé (mois)", "8. Décalage", "0 \"mois\"",
      "Décalage d'application qui explique le mieux la hausse demandée (écart minimal entre demandé et justifié) : mesure le retard de répercussion du fournisseur.",
      """VAR _t = ADDCOLUMNS ( ALL ( param_decalage[decalage_mois] ), "@e", ABS ( [Écart pts] ) )
@@ -674,7 +690,7 @@ RETURN
     ("Dernier indice chargé", "2. Matières", "", "Libellé du dernier mois d'indice INSEE disponible (fraîcheur).",
      """VAR _d = CALCULATE ( MAX ( fact_indice[date] ), REMOVEFILTERS ( fact_indice ), REMOVEFILTERS ( dim_date ) )
 RETURN
-    "Indices INSEE à fin " & FORMAT ( _d, "mmmm yyyy" )"""),
+    "INSEE réel · " & FORMAT ( _d, "mmm yyyy" ) & " · tarifs fictifs" """),
 ]
 
 def _panier_rapide(campagne: str) -> str:
@@ -761,6 +777,20 @@ RETURN
         SUMX ( _t, fact_achats[quantite] * ( fact_achats[prix_unitaire] - fact_achats[prix_unitaire_n1] ) ),
         SUMX ( _t, fact_achats[quantite] * fact_achats[prix_unitaire_n1] )
     )"""),
+    ("Effet mix %", "3. Achats", "+0.0%;-0.0%;0.0%",
+     "Ce que l'évolution du montant ne doit ni aux volumes ni aux prix : changement du panier acheté (plus ou moins d'articles chers).",
+     """VAR _m = [Évol. montant %]
+VAR _v = [Évol. volume %]
+VAR _p = [Effet prix %]
+RETURN
+    IF ( NOT ISBLANK ( _m ) && NOT ISBLANK ( _v ) && NOT ISBLANK ( _p ), DIVIDE ( 1 + _m, ( 1 + _v ) * ( 1 + _p ) ) - 1 )"""),
+    ("Lecture prix volumes", "3. Achats", "",
+     "Décomposition lisible du montant : volumes × prix × mix.",
+     """VAR _f = "+0.0 %;-0.0 %"
+RETURN
+    "Montant " & FORMAT ( [Évol. montant %], _f ) & " = volumes " & FORMAT ( [Évol. volume %], _f ) & " × prix "
+        & FORMAT ( [Effet prix %], _f ) & " × effet mix " & FORMAT ( [Effet mix %], _f )
+        & " (le mix : on achète plus, ou moins, d'articles chers)." """),
     ("Surcoût prix €", "3. Achats", "#,0 €", "Euros payés en plus par la seule hausse de prix, à volumes constants.",
      """VAR _t = FILTER ( fact_achats, NOT ISBLANK ( fact_achats[prix_unitaire] ) && NOT ISBLANK ( fact_achats[prix_unitaire_n1] ) )
 RETURN
@@ -798,6 +828,12 @@ RETURN
     ("Plafond 2027 projeté %", "10. Prévisions ML", "+0.0%;-0.0%;0.0%",
      "Hausse justifiable 2027 projetée, pondérée par prix 2026 × volume 2025.",
      "DIVIDE ( SUMX ( ml_plafond_2027, ml_plafond_2027[poids] * ml_plafond_2027[plafond_central] ), SUM ( ml_plafond_2027[poids] ) )"),
+    ("Lecture 2027", "10. Prévisions ML", "",
+     "Relie la variation des matières et la hausse justifiable : les matières ne pèsent qu'une partie du prix.",
+     """VAR _m = CALCULATE ( AVERAGE ( ml_variation_2027[variation_centrale] ), REMOVEFILTERS ( ml_variation_2027 ) )
+RETURN
+    "Matières " & FORMAT ( _m, "+0 %" ) & " en moyenne, mais une part du prix seulement : "
+        & FORMAT ( [Plafond 2027 projeté %], "+0.0 %" ) & " justifiables" """),
     ("Fourchette plafond 2027", "10. Prévisions ML", "", "Fourchette à 80 % du plafond 2027 projeté.",
      """VAR _w = SUM ( ml_plafond_2027[poids] )
 VAR _b = DIVIDE ( SUMX ( ml_plafond_2027, ml_plafond_2027[poids] * ml_plafond_2027[plafond_bas] ), _w )
@@ -808,7 +844,7 @@ RETURN
      "SELECTEDVALUE ( ml_segments_fournisseurs[segment_nom] )"),
     ("Écart moyen 3 campagnes (pts)", "10. Prévisions ML", "+0.0;-0.0;0.0", "Écart moyen demandé − justifié sur 3 campagnes.",
      "AVERAGE ( ml_segments_fournisseurs[ecart_moyen] ) * 100"),
-    ("Lignes anormales", "10. Prévisions ML", "#,0", "Lignes du tarif 2026 isolées en hausse excessive.",
+    ("Lignes anormales", "10. Prévisions ML", "#,0", "Lignes du tarif 2026 isolées en écart non justifié (hausse excessive ou baisse non répercutée).",
      "CALCULATE ( COUNTROWS ( ml_anomalies_tarif ), ml_anomalies_tarif[anomalie] = TRUE (), ml_anomalies_tarif[ecart] > 0 )"),
     ("€ lignes anormales", "10. Prévisions ML", "#,0 €", "Écart en euros des lignes isolées en hausse excessive.",
      "CALCULATE ( SUM ( ml_anomalies_tarif[enjeu_eur] ), ml_anomalies_tarif[anomalie] = TRUE (), ml_anomalies_tarif[ecart] > 0 )"),
@@ -821,7 +857,7 @@ RETURN
     ("Surcoût vs meilleur prix groupe", "11. Groupe", "#,0 €",
      "Ce que les sites paient au-dessus du meilleur prix obtenu par un site du groupe pour le même article la même année.",
      "SUM ( fact_achats_entite[surcout_vs_meilleur] )"),
-    ("% surcoût groupe", "11. Groupe", "0.0%", "Surcoût vs meilleur prix groupe / montant payé.",
+    ("% surcoût groupe", "11. Groupe", "0.0%", "Surcoût vs meilleur prix groupe / montant payé par les sites sur la période filtrée (64 M€ sur 2023-2026).",
      "DIVIDE ( [Surcoût vs meilleur prix groupe], [Montant payé] )"),
     ("Prix payé moyen", "11. Groupe", "#,0.00 €", "Montant payé / quantité.",
      "DIVIDE ( [Montant payé], SUM ( fact_achats_entite[quantite] ) )"),
@@ -832,7 +868,9 @@ RETURN
     ("Écart d'application €", "11. Groupe", "+#,0 €;-#,0 €;0 €",
      "Prix payé − prix du tarif, sur les lignes où l'ERP n'applique pas le tarif : positif = payé trop cher.",
      "SUM ( fact_achats_entite[ecart_application] )"),
-    ("Payé en trop (application)", "11. Groupe", "#,0 €", "Somme des écarts d'application défavorables (payé au-dessus du tarif).",
+    ("Couleur écart application", "11. Groupe", "", "Ambre si l'écart net est défavorable (payé au-dessus du tarif), vert sinon.",
+     """IF ( [Écart d'application €] > 0, "#C9781C", "#0F5C4A" )"""),
+    ("Payé en trop (application)", "11. Groupe", "#,0 €", "Brut : somme des seules lignes défavorables (payé au-dessus du tarif), sans compenser les lignes favorables.",
      "SUMX ( FILTER ( fact_achats_entite, fact_achats_entite[ecart_application] > 0 ), fact_achats_entite[ecart_application] )"),
     ("Articles en écart d'application", "11. Groupe", "#,0", "Articles avec au moins une ligne en retard ou en écart durable.",
      """CALCULATE ( DISTINCTCOUNT ( fact_achats_entite[article_id] ),
@@ -843,24 +881,26 @@ RETURN
      "SUM ( fact_negociation[eur_renegociables] )"),
     ("Taux de transformation", "12. Gains", "0%", "Économies obtenues / potentiel renégociable.",
      "DIVIDE ( [Économies obtenues €], [Potentiel renégociable €] )"),
-    ("Hausse demandée (négo) %", "12. Gains", "+0.0%;-0.0%;0.0%", "Hausse demandée, pondérée par la valeur N.",
+    ("Hausse demandée (négo) %", "12. Gains", "+0.00%;-0.00%;0.00%", "Hausse demandée, pondérée par la valeur N.",
      "DIVIDE ( SUMX ( fact_negociation, fact_negociation[valeur_n] * fact_negociation[hausse_demandee] ), SUM ( fact_negociation[valeur_n] ) )"),
-    ("Hausse obtenue %", "12. Gains", "+0.0%;-0.0%;0.0%", "Hausse finalement accordée, pondérée par la valeur N.",
+    ("Hausse obtenue %", "12. Gains", "+0.00%;-0.00%;0.00%", "Hausse finalement accordée, pondérée par la valeur N.",
      "DIVIDE ( SUMX ( fact_negociation, fact_negociation[valeur_n] * fact_negociation[hausse_obtenue] ), SUM ( fact_negociation[valeur_n] ) )"),
-    ("Hausse justifiée (négo) %", "12. Gains", "+0.0%;-0.0%;0.0%", "Hausse justifiée par les matières, pondérée par la valeur N.",
+    ("Hausse justifiée (négo) %", "12. Gains", "+0.00%;-0.00%;0.00%", "Hausse justifiée par les matières, pondérée par la valeur N.",
      "DIVIDE ( SUMX ( fact_negociation, fact_negociation[valeur_n] * fact_negociation[hausse_justifiee] ), SUM ( fact_negociation[valeur_n] ) )"),
     ("Conseil appro", "7. Alertes", "",
-     "Conseil d'approvisionnement avant la prochaine campagne : baisse matière → limiter les achats et attendre le nouveau tarif ; hausse > 3 % → anticiper les achats avant le 1er janvier.",
+     "Conseil d'approvisionnement avant la prochaine campagne, selon le plafond justifié : < 0 → attendre le nouveau tarif ; "
+     "> 12 % → anticiper les achats avant le 1er janvier ; 6 à 12 % → anticiper sur les références clés ; sinon normal.",
      """VAR _p = [Plafond justifié prochaine campagne %]
 RETURN
     SWITCH ( TRUE (), ISBLANK ( _p ), BLANK (),
-        _p < 0, "▼ Limiter les achats, attendre la baisse",
-        _p > 0.03, "▲ Anticiper les achats",
-        "● Achats normaux" )"""),
-    ("Couleur conseil", "7. Alertes", "", "Vert = attendre la baisse, rouge = anticiper avant la hausse, gris = normal.",
+        _p < 0, "▼ Attendre la baisse",
+        _p > 0.12, "▲ Anticiper",
+        _p > 0.06, "◆ Anticiper les réf. clés",
+        "● Normal" )"""),
+    ("Couleur conseil", "7. Alertes", "", "Vert = attendre la baisse, ambre = anticiper, ambre clair = références clés, gris = normal.",
      """VAR _p = [Plafond justifié prochaine campagne %]
 RETURN
-    SWITCH ( TRUE (), ISBLANK ( _p ), "#56655F", _p < 0, "#0F5C4A", _p > 0.03, "#C9781C", "#56655F" )"""),
+    SWITCH ( TRUE (), ISBLANK ( _p ), "#56655F", _p < 0, "#0F5C4A", _p > 0.12, "#C9781C", _p > 0.06, "#B08A2E", "#56655F" )"""),
 ]
 
 ROLES = {
@@ -971,9 +1011,9 @@ PAGES = [
         segment(("c", "dim_famille", "univers"), 280, 80, titre="Univers"),
         *KPI_CAMPAGNE,
         v("clusteredBarChart", 20, 270, 620, 430, {"Category": [FOURN], "Y": [m("€ renégociables")]},
-          titre="€ renégociables par fournisseur", ordre=(m("€ renégociables"), 2), objets={"labels": True}),
+          titre="€ renégociables par fournisseur (écarts ligne à ligne)", ordre=(m("€ renégociables"), 2), objets={"labels": True}),
         v("clusteredBarChart", 660, 270, 600, 430, {"Category": [("c", "dim_famille", "libelle")], "Y": [m("Écart pts")]},
-          titre="Écart (pts) par famille · rouge > 3 pts, orange > 1 pt", ordre=(m("Écart pts"), 2),
+          titre="Écart (pts) par famille · ambre foncé > 3 pts, ambre > 1 pt, vert ≤ 1 pt", ordre=(m("Écart pts"), 2),
           objets={"labels": True, "couleur_barres": "Couleur écart"}),
     ]),
     ("Fournisseurs", entete(
@@ -990,7 +1030,7 @@ PAGES = [
           titre="Classement · clic droit sur un fournisseur → Extraire → Fiche négociation", ordre=(m("€ renégociables"), 2),
           objets={"noms": {FOURN: "Fournisseur", m("Statut fournisseur"): "Statut", m("Hausse demandée %"): "Demandée",
                            m("Hausse justifiée %"): "Justifiée", m("Écart pts"): "Écart (pts)",
-                           m("€ renégociables"): "€ renégociables", m("Effet cliquet"): "Cliquet"},
+                           m("€ renégociables"): "€ ligne à ligne", m("Effet cliquet"): "Cliquet"},
                   "couleur_texte": (m("Statut fournisseur"), "Couleur écart")}),
         segment(FOURN, 540, 80, w=260, titre="Fournisseur"),
         bouton("Fiche négociation  →", "Fiche négociation", 1060, 92, w=200),
@@ -1095,6 +1135,8 @@ PAGES = [
           objets={"noms": {("c", "dim_article", "designation"): "Article", FOURN: "Fournisseur",
                            ("c", "dim_famille", "libelle"): "Famille", m("Volume annuel"): "Volume / an",
                            m("Impact € prochaine campagne"): "Impact €", m("Conseil appro"): "Appro"},
+                  "largeurs": {("c", "dim_article", "designation"): 250, m("Impact € prochaine campagne"): 75,
+                               m("Volume annuel"): 70, m("Conseil appro"): 150},
                   "couleur_texte": (m("Conseil appro"), "Couleur conseil")}),
     ]),
     ("Prix & volumes", entete(
@@ -1110,11 +1152,14 @@ PAGES = [
           filtres=[(("c", "dim_date", "annee"), [2026])]),
         v("card", 965, 150, 295, 96, {"Values": [m("Effet prix %")]}, titre="Effet prix (volumes constants)",
           filtres=[(("c", "dim_date", "annee"), [2026])]),
-        v("lineChart", 20, 260, 610, 440,
+        v("card", 20, 250, 1240, 42, {"Values": [m("Lecture prix volumes")]}, objets={"police": 10, "sans_bord": True},
+          filtres=[(("c", "dim_date", "annee"), [2026])]),
+        v("lineChart", 20, 298, 610, 402,
           {"Category": [("c", "dim_date", "mois_court")], "Series": [("c", "dim_date", "annee")], "Y": [m("Quantité achetée")]},
           titre="Volumes par mois : une courbe par année", ordre=(("c", "dim_date", "mois_court"), 1),
+          objets={"noms": {("c", "dim_date", "annee"): "Année"}},
           filtres=[(("c", "dim_date", "annee"), [2024, 2025, 2026])]),
-        v("tableEx", 650, 260, 610, 440,
+        v("tableEx", 650, 298, 610, 402,
           {"Values": [FOURN, m("Montant achats"), m("Évol. montant %"), m("Évol. volume %"), m("Effet prix %"), m("Surcoût prix €")]},
           titre="Par fournisseur, 2026 à date vs 2025 · clic droit → Extraire → Fiche", ordre=(m("Surcoût prix €"), 2),
           objets={"noms": {FOURN: "Fournisseur", m("Montant achats"): "Achats", m("Évol. montant %"): "Montant",
@@ -1128,14 +1173,14 @@ PAGES = [
         segment(("c", "dim_entite", "nom"), 215, 80, w=220, titre="Site"),
         segment(FOURN, 450, 80, w=260, titre="Fournisseur"),
         tuile(20, 152, 300, 84, "Surcoût vs meilleur prix groupe", "Surcoût vs meilleur prix du groupe", cle=True),
-        tuile(335, 152, 300, 84, "% surcoût groupe", "Part du montant payé"),
-        tuile(650, 152, 300, 84, "Payé en trop (application)", "Payé au-dessus du tarif (ERP)"),
+        tuile(335, 152, 300, 84, "% surcoût groupe", "Surcoût / montant payé par les sites"),
+        tuile(650, 152, 300, 84, "Payé en trop (application)", "Payé au-dessus du tarif (brut)"),
         tuile(965, 152, 295, 84, "Articles en écart d'application", "Articles à corriger dans les ERP"),
         v("clusteredBarChart", 20, 250, 400, 220, {"Category": [("c", "dim_entite", "nom")], "Y": [m("Surcoût vs meilleur prix groupe")]},
           titre="Surcoût par site", ordre=(m("Surcoût vs meilleur prix groupe"), 2), objets={"labels": True}),
         v("clusteredBarChart", 440, 250, 820, 220, {"Category": [("c", "fact_achats_entite", "statut_prix")], "Y": [m("Écart d'application €")]},
-          titre="Écart d'application par cause : retard = ancien tarif encore appliqué, écart durable = prix mal saisi",
-          ordre=(m("Écart d'application €"), 2), objets={"labels": True},
+          titre="Écart d'application net par cause · retard = ancien tarif (souvent favorable), écart durable = prix mal saisi",
+          ordre=(m("Écart d'application €"), 2), objets={"labels": True, "couleur_barres": "Couleur écart application"},
           filtres=[(("c", "fact_achats_entite", "statut_prix"), ["Retard d'application", "Écart durable"])]),
         v("tableEx", 20, 484, 620, 216,
           {"Values": [("c", "dim_article", "designation"), ("c", "dim_entite", "nom"), m("Prix payé moyen"),
@@ -1149,7 +1194,7 @@ PAGES = [
         v("tableEx", 660, 484, 600, 216,
           {"Values": [("c", "dim_article", "designation"), ("c", "dim_entite", "nom"), ("c", "fact_achats_entite", "statut_prix"),
                       m("Écart d'application €")]},
-          titre="Tarifs mal appliqués : à transmettre à l'approvisionneur du site", ordre=(m("Écart d'application €"), 2),
+          titre="Tarifs mal appliqués (net par article et site) : à transmettre à l'approvisionneur", ordre=(m("Écart d'application €"), 2),
           objets={"noms": {("c", "dim_article", "designation"): "Article", ("c", "dim_entite", "nom"): "Site",
                            ("c", "fact_achats_entite", "statut_prix"): "Cause", m("Écart d'application €"): "Écart"},
                   "largeurs": {("c", "dim_article", "designation"): 230, ("c", "dim_entite", "nom"): 95,
@@ -1166,7 +1211,8 @@ PAGES = [
         tuile(965, 152, 295, 84, "Hausse obtenue %", "Hausse accordée (moyenne pondérée)"),
         v("clusteredColumnChart", 20, 250, 620, 450,
           {"Category": [("c", "fact_negociation", "campagne")], "Y": [m("Potentiel renégociable €"), m("Économies obtenues €")]},
-          titre="Potentiel vs économies obtenues, par campagne", ordre=(("c", "fact_negociation", "campagne"), 1), objets={"labels": True}),
+          titre="Potentiel vs économies obtenues, par campagne", ordre=(("c", "fact_negociation", "campagne"), 1),
+          objets={"labels": True, "couleurs_series": {m("Potentiel renégociable €"): "#B9B4A8", m("Économies obtenues €"): "#0F5C4A"}}),
         v("tableEx", 660, 250, 600, 450,
           {"Values": [FOURN, m("Hausse demandée (négo) %"), m("Hausse justifiée (négo) %"), m("Hausse obtenue %"),
                       m("Économies obtenues €"), m("Taux de transformation")]},
@@ -1177,15 +1223,18 @@ PAGES = [
     ("Prévisions", entete(
         "Prévisions (machine learning)",
         "Chaque modèle est testé sur le passé contre une référence naïve et n'est gardé que s'il la bat. Détail : docs/ml_rapport.md.") + [
-        tuile(20, 92, 300, 84, "Plafond 2027 projeté %", "Hausse justifiable 2027 projetée", cle=True),
-        v("card", 335, 92, 300, 84, {"Values": [m("Fourchette plafond 2027")]}, titre="Fourchette à 80 %", objets={"police": 14}),
+        tuile(20, 92, 300, 84, "Fourchette plafond 2027", "Budget de hausse 2027 (fourchette à 80 %)", cle=True),
+        tuile(335, 92, 300, 84, "Plafond 2027 projeté %", "Valeur centrale"),
+        v("card", 280, 190, 500, 62, {"Values": [m("Lecture 2027")]}, objets={"police": 9, "sans_bord": True}),
         tuile(650, 92, 300, 84, "Lignes anormales", "Lignes tarifaires anormales 2026"),
         tuile(965, 92, 295, 84, "€ lignes anormales", "Écart sur ces lignes"),
         segment(("c", "dim_matiere", "libelle"), 20, 190, w=240, titre="Matière", unique=True),
         v("lineChart", 20, 262, 760, 200,
           {"Category": [("c", "dim_date", "date")],
            "Y": [m("Indice (composition)"), m("Prévision indice"), m("Prévision basse 80 %"), m("Prévision haute 80 %")]},
-          titre="Indice réel et prévision à 3 mois (fourchette à 80 %)", objets={"continu": True},
+          titre="Indice réel (encre), prévision (vert) et fourchette à 80 % (gris)",
+          objets={"continu": True, "couleurs_series": {m("Indice (composition)"): "#12211D", m("Prévision indice"): "#0F5C4A",
+                                                      m("Prévision basse 80 %"): "#C9C4B8", m("Prévision haute 80 %"): "#C9C4B8"}},
           filtres=[(("c", "dim_date", "annee"), [2025, 2026])]),
         v("tableEx", 800, 190, 460, 272,
           {"Values": [("c", "dim_matiere", "libelle"), m("Variation 2027 attendue %"), m("Fourchette 2027")]},
@@ -1264,8 +1313,8 @@ PAGES = [
 # Palette catégorielle validée (skill dataviz : l'ordre garantit la lisibilité daltonisme)
 LARGEUR_NAV = 200
 # Ordre de navigation : le parcours de négociation, puis les pages de détail
-ORDRE = ["Parcours négociation", "Synthèse campagne", "Alertes matières", "Fournisseurs", "Fiche négociation",
-         "Références 80/20", "Prix & volumes", "Prix payés", "Prévisions", "Gains", "Détail article", "Matières", "Rattachement"]
+ORDRE = ["Parcours négociation", "Alertes matières", "Synthèse campagne", "Fournisseurs", "Prix & volumes",
+         "Prix payés", "Prévisions", "Fiche négociation", "Gains", "Matières", "Rattachement", "Références 80/20", "Détail article"]
 PAGES.sort(key=lambda p: ORDRE.index(p[0]))
 ICONES = ["➜", "◉", "⚑", "◎", "✎", "▥", "€", "▦", "◷", "✓", "▤", "≋", "⇄"]
 COURT = {"Parcours négociation": "Parcours"}  # libellés de navigation raccourcis
@@ -1360,11 +1409,11 @@ THEME = {
 }
 
 
-NAV = ["Parcours négociation", "Synthèse campagne", "Alertes matières", "Fournisseurs", "Prix & volumes",
+NAV = ["Parcours négociation", "Alertes matières", "Synthèse campagne", "Fournisseurs", "Prix & volumes",
        "Prix payés", "Prévisions", "Fiche négociation", "Gains", "Matières", "Rattachement"]  # Détail article : par extraction uniquement
 NAV_COURT = {"Parcours négociation": "Parcours", "Synthèse campagne": "Synthèse", "Alertes matières": "Alertes",
              "Fournisseurs": "Fournisseurs", "Prix & volumes": "Prix & vol.", "Prix payés": "Prix payés", "Gains": "Gains", "Prévisions": "Prévisions", "Fiche négociation": "Négocier",
-             "Matières": "Matières", "Rattachement": "Réfs"}
+             "Matières": "Matières", "Rattachement": "Rattachement"}
 
 
 def barre_navigation(page: int) -> list[dict]:
@@ -1608,6 +1657,10 @@ def visuel(page: int, i: int, d: dict) -> dict:
                                         "Property": d["objets"]["couleur_barres"]}}}
             objets["dataPoint"] = [{"properties": {"fill": {"solid": {"color": mes}}},
                                     "selector": {"data": [{"dataViewWildcard": {"matchingOption": 1}}]}}]
+        if d["objets"].get("couleurs_series"):
+            objets.setdefault("dataPoint", [])
+            objets["dataPoint"] += [{"properties": {"fill": {"solid": {"color": lit(hexa)}}}, "selector": {"metadata": q.ref(c)}}
+                                    for c, hexa in d["objets"]["couleurs_series"].items()]
         if d["objets"].get("couleur_texte"):
             col, coul = d["objets"]["couleur_texte"]
             mes = {"expr": {"Measure": {"Expression": {"SourceRef": {"Entity": "_Mesures"}}, "Property": coul}}}

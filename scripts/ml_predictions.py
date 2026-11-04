@@ -123,7 +123,11 @@ def indices(out: list[str]) -> pd.DataFrame:
             f"Backtest chronologique : {len(origines)} dates de départ (janvier 2024 → août 2026), "
             "6 matières, chaque modèle réentraîné à chaque date sur le seul passé. Erreur = écart relatif à l'indice "
             "réellement publié ensuite (MAPE). « Sens » = part des cas où le modèle a vu juste sur hausse / baisse.", "",
-            tab(pd.DataFrame(lignes, columns=["horizon", "modèle", "erreur moyenne", "sens juste", "prévisions", ""])), ""]
+            tab(pd.DataFrame(lignes, columns=["horizon", "modèle", "erreur moyenne", "sens juste", "prévisions", ""])), "",
+            "Pourquoi le naïf gagne : 6 séries mensuelles sur moins de 5 ans, soit quelques centaines de points, c'est trop peu "
+            "pour qu'un modèle à arbres (LightGBM) apprenne autre chose que du bruit. Un « sens juste » proche de 50 % le confirme : "
+            "sur des cours de métaux, le mois prochain ressemble surtout au dernier. La valeur utile est donc la **fourchette**, "
+            "tirée des erreurs passées, qui sert de budget de hausse.", ""]
 
     # Prévision finale depuis le dernier mois, intervalle à 80 % = quantiles des erreurs du backtest
     gbm = {h: entrainer_gbm(piv, h) for h in HORIZONS}
@@ -264,12 +268,21 @@ def segments(out: list[str]) -> pd.DataFrame:
     feat["profil_cache"] = fou.loc[feat.index, "profil"]
     feat["nom"] = fou.loc[feat.index, "nom"]
     ari = adjusted_rand_score(feat.profil_cache, feat.segment)
+    # robustesse : le générateur sépare nettement les profils (d'où un accord parfait) ; on bruite les variables
+    rng = np.random.default_rng(SEED)
+    ari_bruit = {sd: np.mean([adjusted_rand_score(feat.profil_cache,
+                                                  KMeans(k, n_init=10, random_state=i).fit_predict(X + rng.normal(0, sd, X.shape)))
+                              for i in range(30)]) for sd in (0.5, 1.0)}
     out += ["## 3. Segmentation des fournisseurs (KMeans, non supervisé)", "",
             f"4 variables par fournisseur sur 3 campagnes : écart moyen, régularité de l'écart, part des campagnes en effet cliquet, "
             f"taux de rattachement automatique. Nombre de segments choisi par la silhouette : **{k}** "
             f"({' ; '.join(f'k={a} : {b:.2f}'.replace('.', ',') for a, b in scores.items())}).", "",
             f"Contrôle : accord avec le profil caché du générateur (indice de Rand ajusté) **{str(round(ari, 2)).replace('.', ',')}** "
-            "(1 = identique, 0 = hasard). Sur données réelles, ce profil n'existe pas : le segment devient l'information.", "",
+            "(1 = identique, 0 = hasard). Cet accord parfait vient du générateur, qui sépare nettement les profils. "
+            "Test de robustesse, en ajoutant du bruit aux variables standardisées (30 tirages) : "
+            f"accord {str(round(ari_bruit[0.5], 2)).replace('.', ',')} avec un bruit d'écart-type 0,5 et "
+            f"{str(round(ari_bruit[1.0], 2)).replace('.', ',')} avec un bruit de 1. Sur données réelles, ce profil n'existe pas : "
+            "le segment devient l'information, à valider avec l'acheteur.", "",
             tab(feat.reset_index()[["nom", "segment_nom", "profil_cache"]].assign(
                 ecart=[f"{x * 100:+.1f} pts".replace(".", ",") for x in feat.ecart_moyen],
                 cliquet=[f"{x:.0%}" for x in feat.part_cliquet]).sort_values("segment_nom")
@@ -301,11 +314,18 @@ def anomalies(out: list[str]) -> pd.DataFrame:
     opp = fou.index[fou.profil == "opportuniste"]
     base = d.fournisseur_id.isin(opp).mean()
     taux = an.fournisseur_id.isin(opp).mean()
+    # précision : une ligne isolée est un « vrai écart » si elle dépasse la hausse justifiée de plus de 3 points
+    vrai = d.ecart > 0.03
+    precision = vrai[d.anomalie & (d.ecart > 0)].mean()
+    rappel = (d.anomalie & vrai).sum() / vrai.sum()
     out += ["## 4. Lignes tarifaires anormales (Isolation Forest, campagne 2026)", "",
             f"{len(d):,} lignes comparées sur 4 variables (écart à la hausse justifiée, écart à la médiane de la famille, "
-            f"hausse demandée, poids de la ligne). {int(d.anomalie.sum())} lignes isolées, dont **{len(an)} en hausse excessive**, "
+            f"hausse demandée, poids de la ligne). {int(d.anomalie.sum())} lignes isolées, dont **{len(an)} en écart non justifié** "
+            "(hausse excessive ou baisse non répercutée), "
             f"pour {an.enjeu_eur.sum():,.0f} € d'écart.".replace(",", " ").replace("  ", ", "), "",
-            f"Contrôle : {taux:.0%} des lignes signalées viennent des fournisseurs opportunistes, contre {base:.0%} de toutes les lignes.", "",
+            f"Contrôle : {taux:.0%} des lignes signalées viennent des fournisseurs opportunistes, contre {base:.0%} de toutes les lignes. "
+            f"Précision : {precision:.0%} des lignes signalées dépassent vraiment la hausse justifiée de plus de 3 points ; "
+            f"elles ne couvrent que {rappel:.0%} de ces lignes (le modèle cible les cas les plus atypiques, pas tous les écarts).", "",
             tab(an.head(10).assign(fournisseur=lambda x: x.fournisseur_id.map(fou.nom))[["designation", "fournisseur"]].assign(
                 demandee=[pct(x) for x in an.head(10).demandee], justifiee=[pct(x) for x in an.head(10).hausse_justifiee],
                 enjeu=[f"{x:,.0f} €".replace(",", " ") for x in an.head(10).enjeu_eur])
