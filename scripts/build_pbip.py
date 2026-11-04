@@ -873,7 +873,9 @@ def entete(titre: str, sous_titre: str) -> list[dict]:
 
 def segment(champ, x, y, w=240, h=62, titre=None, unique=False):
     """Segment déroulant, synchronisé entre toutes les pages (le choix suit l'utilisateur)."""
-    nom_sync = f"{champ[1]}_{champ[2]}"  # table + colonne : deux colonnes « nom » ne se synchronisent pas
+    # table + colonne : deux colonnes « nom » ne se synchronisent pas. Un segment à sélection unique a son propre
+    # groupe : synchronisé avec les autres, il leur imposerait sa valeur (premier fournisseur de la liste).
+    nom_sync = f"{champ[1]}_{champ[2]}" + ("_unique" if unique else "")
     return v("slicer", x, y, w, h, {"Values": [champ]},
              objets={"dropdown": True, "entete": titre, "unique": unique, "sync": nom_sync})
 

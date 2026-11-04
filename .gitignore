@@ -4,3 +4,4 @@ __pycache__/
 *.pbix
 **/.pbi/localSettings.json
 **/.pbi/cache.abf
+docs/portfolio/*.zip

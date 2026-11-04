@@ -27,7 +27,7 @@ NAVY, NAVY2, BLEU, AMBRE, ROUGE, VERT, BLANC, GRIS = (
     (14, 23, 20), (22, 33, 29), (15, 92, 74), (229, 154, 69), (229, 154, 69), (95, 196, 160), (238, 242, 239), (157, 176, 168))
 MENTHE = (127, 209, 179)
 CROP = (37, 204, 1222, 922)  # zone du canevas du rapport (bandeau compris) dans les captures 1728×1080
-CROPS = {"10_prix_payes.png": (50, 80, 1610, 1002), "11_gains.png": (50, 80, 1610, 1002)}  # captures 1920×1080 (écran 4K)
+CROP_1920 = (50, 80, 1610, 1002)  # même zone dans les captures 1920×1080 (écran 4K)
 
 
 def police(nom: str, taille: int) -> ImageFont.FreeTypeFont:
@@ -86,7 +86,8 @@ def pastille(img, xy, s, couleur, alpha=1.0, taille=34):
 
 
 def charger_capture(nom: str, largeur: int) -> Image.Image:
-    im = Image.open(CAPT / nom).convert("RGB").crop(CROPS.get(nom, CROP))
+    im = Image.open(CAPT / nom).convert("RGB")
+    im = im.crop(CROP_1920 if im.size == (1920, 1080) else CROP)
     h = int(im.height * largeur / im.width)
     im = im.resize((largeur, h), Image.LANCZOS)
     masque = Image.new("L", im.size, 0)
