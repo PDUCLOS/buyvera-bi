@@ -795,8 +795,10 @@ RETURN
      "DIVIDE ( [Surcoût vs meilleur prix groupe], [Montant payé] )"),
     ("Prix payé moyen", "11. Groupe", "#,0.00 €", "Montant payé / quantité.",
      "DIVIDE ( [Montant payé], SUM ( fact_achats_entite[quantite] ) )"),
-    ("Meilleur prix groupe", "11. Groupe", "#,0.00 €", "Meilleur prix moyen payé par un site du groupe (un article à la fois).",
-     "IF ( HASONEVALUE ( dim_article[article_id] ), AVERAGE ( fact_achats_entite[meilleur_prix_groupe] ) )"),
+    ("Meilleur prix groupe", "11. Groupe", "#,0.00 €",
+     "Meilleur prix moyen payé par un site du groupe pour l'article et l'année, pondéré par les quantités achetées.",
+     "DIVIDE ( SUMX ( fact_achats_entite, fact_achats_entite[quantite] * fact_achats_entite[meilleur_prix_groupe] ), "
+     "SUM ( fact_achats_entite[quantite] ) )"),
     ("Écart d'application €", "11. Groupe", "+#,0 €;-#,0 €;0 €",
      "Prix payé − prix du tarif, sur les lignes où l'ERP n'applique pas le tarif : positif = payé trop cher.",
      "SUM ( fact_achats_entite[ecart_application] )"),
@@ -871,7 +873,7 @@ def entete(titre: str, sous_titre: str) -> list[dict]:
 
 def segment(champ, x, y, w=240, h=62, titre=None, unique=False):
     """Segment déroulant, synchronisé entre toutes les pages (le choix suit l'utilisateur)."""
-    nom_sync = champ[-1]
+    nom_sync = f"{champ[1]}_{champ[2]}"  # table + colonne : deux colonnes « nom » ne se synchronisent pas
     return v("slicer", x, y, w, h, {"Values": [champ]},
              objets={"dropdown": True, "entete": titre, "unique": unique, "sync": nom_sync})
 

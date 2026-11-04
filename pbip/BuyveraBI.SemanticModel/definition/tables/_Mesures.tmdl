@@ -798,8 +798,8 @@ table _Mesures
 		displayFolder: 11. Groupe
 		lineageTag: ed58ffe7-00fb-508b-8a30-c92cb50e99db
 
-	/// Meilleur prix moyen payé par un site du groupe (un article à la fois).
-	measure 'Meilleur prix groupe' = IF ( HASONEVALUE ( dim_article[article_id] ), AVERAGE ( fact_achats_entite[meilleur_prix_groupe] ) )
+	/// Meilleur prix moyen payé par un site du groupe pour l'article et l'année, pondéré par les quantités achetées.
+	measure 'Meilleur prix groupe' = DIVIDE ( SUMX ( fact_achats_entite, fact_achats_entite[quantite] * fact_achats_entite[meilleur_prix_groupe] ), SUM ( fact_achats_entite[quantite] ) )
 		formatString: #,0.00 €
 		displayFolder: 11. Groupe
 		lineageTag: d4dd5840-87cc-53a3-b971-63be722f859c

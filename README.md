@@ -3,14 +3,18 @@
 Chaque année, les fournisseurs envoient leurs nouveaux tarifs avec une hausse « justifiée par les matières premières ».
 Ce projet Power BI, aux couleurs de Buyvera, compare la hausse demandée avec l'évolution **réelle** des matières qui composent chaque produit
 (indices INSEE), et dit à l'acheteur, fournisseur par fournisseur, combien d'euros il peut renégocier, et ce qu'il
-doit anticiper pour la campagne suivante.
+doit anticiper pour la campagne suivante. Il vérifie aussi que chaque site du groupe paie le meilleur prix, et il
+mesure ce que la négociation a vraiment rapporté.
 
 ![Synthèse de campagne](docs/captures/01_synthese_campagne.png)
 
 > **Campagne 2026 : les fournisseurs demandent +1,2 % quand les matières justifient −0,6 %. 335 k€ sont renégociables,
 > dont 120 k€ chez un seul fournisseur. Pour 2027, les cours à fin septembre 2026 justifient déjà +11,2 %.**
+>
+> **Dans le groupe, 624 k€ ont été payés au-dessus du meilleur prix d'un autre site. Sur trois campagnes, la négociation
+> a rapporté 524 k€, soit 51 % du potentiel chiffré.**
 
-🎬 Vidéo de présentation (55 s, vision achats) : [`docs/video/buyvera_promo.mp4`](docs/video/buyvera_promo.mp4)
+🎬 Vidéo de présentation (70 s, vision achats) : [`docs/video/buyvera_promo.mp4`](docs/video/buyvera_promo.mp4)
 
 Indices matières réels (INSEE), tarifs, volumes et fournisseurs fictifs. La logique métier vient de 20 ans de
 distribution industrielle (transmission mécanique et CVC).
@@ -27,7 +31,7 @@ distribution industrielle (transmission mécanique et CVC).
 | **Rattachement** | Quelle part des références tarif se rattache seule à l'ERP (objectif 80 %) ? Liste des propositions à valider. |
 | **Alertes matières** | Ce qui monte ou baisse avant que le fournisseur ne le dise : signal 3 mois, plafond justifié pour la campagne suivante, articles exposés et plan d'action (convoquer le fournisseur, préparer la défense, limiter ou anticiper les achats). |
 | **Prix & volumes** | Année sur année, à date : montant, volumes, **effet prix à volumes constants**, surcoût par fournisseur, une courbe de volumes par année. |
-| **Prix payés** | Vision groupe sur 3 sites (un historique, deux rachetés) : **surcoût vs meilleur prix du groupe** (718 k€), tarifs mal appliqués dans les ERP (retard d'application, écart durable) à transmettre aux appros. |
+| **Prix payés** | Vision groupe sur 3 sites (un historique, deux rachetés) : **surcoût vs meilleur prix du groupe** (624 k€), tarifs mal appliqués dans les ERP (retard d'application, écart durable) à transmettre aux appros. |
 | **Gains** | Ce que la négociation a rapporté : économies obtenues (524 k€ sur 2024-2026), potentiel renégociable, **taux de transformation** (51 %), hausse demandée vs obtenue par fournisseur. |
 | **Prévisions** | Machine learning : plafond 2027 projeté, volumes à anticiper, segments fournisseurs, lignes tarifaires anormales. |
 | **Fiche négociation** | Tout pour le rendez-vous : statut, argument rédigé, **courbe de décalage prix vs coût matière**, levier matière coloré, **simulateur de contre-proposition**. Accessible par clic droit → Extraire depuis n'importe quel fournisseur. |

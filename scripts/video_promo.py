@@ -27,6 +27,7 @@ NAVY, NAVY2, BLEU, AMBRE, ROUGE, VERT, BLANC, GRIS = (
     (14, 23, 20), (22, 33, 29), (15, 92, 74), (229, 154, 69), (229, 154, 69), (95, 196, 160), (238, 242, 239), (157, 176, 168))
 MENTHE = (127, 209, 179)
 CROP = (37, 204, 1222, 922)  # zone du canevas du rapport (bandeau compris) dans les captures 1728×1080
+CROPS = {"10_prix_payes.png": (50, 80, 1610, 1002), "11_gains.png": (50, 80, 1610, 1002)}  # captures 1920×1080 (écran 4K)
 
 
 def police(nom: str, taille: int) -> ImageFont.FreeTypeFont:
@@ -85,7 +86,7 @@ def pastille(img, xy, s, couleur, alpha=1.0, taille=34):
 
 
 def charger_capture(nom: str, largeur: int) -> Image.Image:
-    im = Image.open(CAPT / nom).convert("RGB").crop(CROP)
+    im = Image.open(CAPT / nom).convert("RGB").crop(CROPS.get(nom, CROP))
     h = int(im.height * largeur / im.width)
     im = im.resize((largeur, h), Image.LANCZOS)
     masque = Image.new("L", im.size, 0)
@@ -159,11 +160,12 @@ def s_probleme(img, t, d):
     texte(img, (200, 220), "Aujourd'hui, l'acheteur négocie à l'aveugle", F_TITRE(64), BLANC, apparition(t, 0.1))
     items = [("✕", "Aucun lien entre la hausse demandée et les cours réels"),
              ("✕", "Les baisses matières ne sont jamais répercutées"),
-             ("✕", "Le fournisseur connaît les cours avant vous")]
+             ("✕", "Le fournisseur connaît les cours avant vous"),
+             ("✕", "Le même article est payé plus cher d'un site à l'autre")]
     for i, (ic, s) in enumerate(items):
         a = apparition(t, 1.0 + i * 1.3)
-        texte(img, (220, 400 + i * 130), ic, F_SYMB(56), ROUGE, a)
-        texte(img, (310, 405 + i * 130), s, F_TEXTE(48), BLANC, a)
+        texte(img, (220, 380 + i * 120), ic, F_SYMB(56), ROUGE, a)
+        texte(img, (310, 385 + i * 120), s, F_TEXTE(48), BLANC, a)
 
 
 def s_logo(img, t, d):
@@ -224,6 +226,23 @@ def s_fiche(img, t, d):
         texte(img, (1380, 474 + i * 90), s, F_TEXTE(38), BLANC, a)
 
 
+def s_groupe(img, t, d):
+    capture(img, "10_prix_payes.png", t, d, 760, 190, 1080, focus=(0.2, 0.45), zoom=0.1)
+    texte(img, (90, 170), "Un article,", F_TITRE(60), BLANC, apparition(t, 0.2))
+    texte(img, (90, 245), "trois prix", F_TITRE(60), AMBRE, apparition(t, 0.4))
+    compteur(img, (90, 400), 624, lambda v: f"{v:,.0f} k€".replace(",", " "), t, 1.0, "payés au-dessus du meilleur prix du groupe", ROUGE)
+    compteur(img, (90, 640), 72, lambda v: f"{v:,.0f} k€".replace(",", " "), t, 2.2, "tarifs négociés mal appliqués dans les ERP", AMBRE)
+    pastille(img, (90, 860), "Aligner les sites rachetés", VERT, apparition(t, 3.4), 30)
+
+
+def s_gains(img, t, d):
+    capture(img, "11_gains.png", t, d, 90, 200, 1180, focus=(0.25, 0.6), zoom=0.1)
+    texte(img, (1320, 250), "Prouvez", F_TITRE(60), BLANC, apparition(t, 0.3))
+    texte(img, (1320, 325), "ce que vous rapportez", F_TITRE(48), AMBRE, apparition(t, 0.5))
+    compteur(img, (1320, 450), 524, lambda v: f"{v:,.0f} k€".replace(",", " "), t, 1.1, "économies obtenues en 3 campagnes", VERT)
+    compteur(img, (1320, 690), 51, lambda v: f"{v:,.0f} %", t, 2.3, "du potentiel transformé en gains", MENTHE)
+
+
 def s_rls(img, t, d):
     capture(img, "00_parcours.png", t, d, 760, 190, 1080, focus=(0.3, 0.5), zoom=0.06)
     texte(img, (90, 260), "Un parcours guidé,", F_TITRE(58), BLANC, apparition(t, 0.2))
@@ -236,7 +255,7 @@ def s_benefices(img, t, d):
     texte(img, (W // 2, 200), "Ce que gagnent les achats", F_TITRE(66), BLANC, apparition(t, 0.1), "mm")
     cartes = [("Négocier", "les baisses aussi vite", "que les hausses", VERT),
               ("Anticiper", "la campagne suivante", "avant le tarif", AMBRE),
-              ("Aligner", "achats, appros", "et commerciaux", MENTHE)]
+              ("Prouver", "les gains obtenus,", "campagne après campagne", MENTHE)]
     for i, (a1, a2, a3, c) in enumerate(cartes):
         a = apparition(t, 0.8 + i * 0.9)
         x = 180 + i * 540
@@ -256,7 +275,7 @@ def s_fin(img, t, d):
     texte(img, (x0, 360), "buy", f, BLANC, a, "lm")
     texte(img, (x0 + int(f.getlength("buy")), 360), "vera", f, MENTHE, a, "lm")
     texte(img, (x0 + int(f.getlength("buyvera ")), 360), "BI", f, BLANC, a, "lm")
-    texte(img, (W // 2, 520), "Ne subissez plus les hausses. Argumentez.", F_LEGER(64), AMBRE, apparition(t, 0.7), "mm")
+    texte(img, (W // 2, 520), "Ne subissez plus les hausses. Argumentez. Prouvez.", F_LEGER(64), AMBRE, apparition(t, 0.7), "mm")
     texte(img, (W // 2, 700), "Power BI · DAX · TMDL · indices INSEE", F_TEXTE(34), GRIS, apparition(t, 1.3), "mm")
     texte(img, (W // 2, 770), "github.com/PDUCLOS/buyvera-bi", F_TITRE(40), BLANC, apparition(t, 1.6), "mm")
     texte(img, (W // 2, 950), "Indices matières réels · tarifs, volumes et fournisseurs fictifs",
@@ -275,15 +294,19 @@ SCENES = [
     ("Les alertes matières vous préviennent avant le fournisseur. Une baisse ? On le convoque. "
      "Une hausse ? On anticipe les achats. Pour 2027, les cours justifient déjà plus onze pour cent.", 6.5, s_alertes),
     ("Pour le rendez-vous, la fiche négociation rédige l'argument et chiffre la contre-proposition.", 5.0, s_fiche),
+    ("Dans le groupe, un même article se paie trois prix. Six cent vingt-quatre mille euros au-dessus du meilleur prix, "
+     "et soixante-douze mille euros de tarifs négociés mal appliqués dans les ERP.", 6.0, s_groupe),
+    ("Et la négociation se mesure : cinq cent vingt-quatre mille euros obtenus en trois campagnes, "
+     "la moitié du potentiel transformée.", 5.5, s_gains),
     ("Un parcours guidé, de l'alerte au rendez-vous. Chaque acheteur ne voit que son périmètre.", 4.0, s_rls),
     ("Négocier les baisses aussi vite que les hausses. Anticiper la campagne suivante. "
-     "Aligner achats, approvisionnements et commerciaux.", 5.5, s_benefices),
-    ("Buyvera BI. Ne subissez plus les hausses : argumentez.", 4.5, s_fin),
+     "Prouver les gains, campagne après campagne.", 5.5, s_benefices),
+    ("Buyvera BI. Ne subissez plus les hausses : argumentez, prouvez.", 4.5, s_fin),
 ]
 FONDU = 0.35  # fondu au noir entre scènes, en secondes
 VOIX = False  # True : voix off Windows (Hortense) calée sur chaque scène
 # Durée de lecture de chaque scène sans voix off (secondes)
-DUREES_LECTURE = [4.5, 3.0, 5.5, 4.5, 6.0, 5.0, 7.0, 5.5, 4.5, 5.5, 4.5]
+DUREES_LECTURE = [4.5, 3.0, 6.5, 4.5, 6.0, 5.0, 7.0, 5.5, 6.5, 6.0, 4.5, 5.5, 5.0]
 
 
 def voix(dossier: Path) -> list[Path]:
@@ -365,7 +388,7 @@ def main() -> None:
         print(f"scène {n + 1}/{len(SCENES)} : {d:.1f} s")
     proc.stdin.close()
     proc.wait()
-    planche = Image.new("RGB", (4 * 480, 3 * 270), NAVY)
+    planche = Image.new("RGB", (4 * 480, -(-len(vignettes) // 4) * 270), NAVY)
     for i, v in enumerate(vignettes):
         planche.paste(v.resize((480, 270)), ((i % 4) * 480, (i // 4) * 270))
     planche.save(SORTIE.with_name("planche_contact.png"))
