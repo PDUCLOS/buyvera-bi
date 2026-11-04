@@ -233,3 +233,56 @@ Ne pas utiliser de vraies marques. Montre-moi le rapport de contrôle avant de c
 | Recul sur l'IA | même analyse en Power BI et en tableau de bord Claude, chiffres identiques, limites écrites |
 
 **À dire franchement en entretien :** les tarifs et les volumes sont synthétiques, les indices matières sont réels. La logique vient de 20 ans de distribution industrielle.
+
+---
+
+## 10. État au 4 novembre 2026
+
+Le plan des sections 1 à 8 est réalisé (jours 1 à 6). Le projet est allé plus loin. Ce qui suit fait foi sur ce qui précède.
+
+### 10.1 Chiffres de la démonstration
+
+| Indicateur | Valeur |
+|---|---|
+| Hausse demandée 2026 / justifiée par les matières | +1,2 % / −0,6 % |
+| € renégociables 2026 | 335 k€, dont 120 k€ chez Orlenza Thermique |
+| Déjà justifié pour 2027 (indices à fin septembre 2026) | +11,2 % (projection ML : +11,3 %, de +8,3 à +14,8 %) |
+| Surcoût vs meilleur prix du groupe (3 sites, 2023-2026) | 624 k€ (1,0 % du montant payé) |
+| Payé au-dessus du tarif dans les ERP | 72 k€, 951 articles à corriger |
+| Économies obtenues 2024-2026 | 524 k€, 51 % du potentiel renégociable |
+| Contrôle croisé Power BI / Python | écart nul sur 7 chiffres clés |
+
+### 10.2 Modèle et pipeline
+
+- 26 tables, 26 relations, 94 mesures, 2 rôles RLS, 12 pages, tout généré par `scripts/build_pbip.py`.
+- Pipeline : `fetch_indices` → `generate_synthetic` → `precalcul_hausses` → `generate_groupe` (3 sites, prix payés, négociations) → `ml_predictions` → `controles` → `build_pbip` → `export_dictionary` / `export_claude`.
+- Ajouts au modèle d'origine : `fact_hausse_article` et `fact_impact_matiere` (précalcul), `dim_entite`, `fact_achats_entite`, `fact_negociation`, tables `ml_*`, paramètres de campagne, fenêtre, décalage et simulateur.
+
+### 10.3 Pages (ordre du bandeau)
+
+Parcours négociation (accueil en 5 étapes) · Synthèse · Alertes matières · Fournisseurs · Prix & volumes · Prix payés ·
+Prévisions (ML) · Fiche négociation · Gains · Matières · Rattachement, plus Détail article (page masquée, ouverte par extraction).
+
+### 10.4 Ce qui a été ajouté au plan
+
+- **Charte Buyvera** et interface repensée : bandeau horizontal, parcours, extraction vers les fiches, segments synchronisés.
+- **Alertes matières** : signal à 3 mois, plafond justifié pour la campagne suivante, plan d'action négociation et appro.
+- **Prix & volumes** année sur année, effet prix à volumes constants, courbes de décalage prix / coût matière.
+- **Machine learning** (`docs/ml_rapport.md`) : chaque modèle testé contre un naïf, n'est gardé que s'il le bat.
+- **Vision groupe** (Prix payés) et **gains de négociation** (Gains), Power BI Desktop seul, sans Power BI Service.
+- **Tableau de bord Claude** étendu (Prix payés, Gains, navigation), **vidéo promo** de 70 s sans voix off.
+- **Portfolio** : `docs/portfolio/BUYVERA_BI_PORTFOLIO.md`, 12 captures, textes prêts pour le site freelance.
+
+### 10.5 Pièges Power BI rencontrés (à ne pas refaire)
+
+- Le format `report.json` attend des énumérations **numériques** : `howCreated: 5` (extraction), `displayOption: 1`,
+  `pageBinding.type: 1` (Drillthrough). Avec le texte `"Drillthrough"`, Desktop ignore la liaison et le menu « Extraire » disparaît.
+- Segments synchronisés : nommer le groupe par **table + colonne** (deux colonnes `nom` se mélangeaient) et isoler les
+  segments à sélection unique (sinon ils imposent le premier fournisseur à toutes les pages).
+- Ne jamais enregistrer (Ctrl+S) le vrai projet dans Desktop : il propose de passer en PBIR, ce qui est irréversible et casse le générateur.
+
+### 10.6 Suite prévue
+
+- Vérifier dans Desktop l'extraction par clic droit, réparée dans le générateur.
+- **Pages annexes ouvertes par une icône « détail »** : mouvements d'un article (achats mois par mois, par site), contrôle
+  des volumes (écarts au profil habituel), consommation par client. Les clients seront **fictifs** (la règle « aucune donnée client » vise les données réelles).

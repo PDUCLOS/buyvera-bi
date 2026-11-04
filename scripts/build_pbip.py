@@ -1235,7 +1235,9 @@ def section_config(i: int, nom: str, visuels=None) -> tuple[str, str]:
         t, c = EXTRACTION[nom]
         champ = {"Column": {"Expression": {"SourceRef": {"Entity": t}}, "Property": c}}
         filtres.append({"name": f"Extraction{i}", "expression": champ, "type": "Categorical", "howCreated": 5})
-        cfg["pageBinding"] = {"name": f"Liaison{i}", "type": "Drillthrough",
+        # format report.json : énumérations numériques (BindingType Default=0, Drillthrough=1, Tooltip=2).
+        # Avec le texte "Drillthrough", Desktop ignore la liaison et le menu « Extraire » n'apparaît pas.
+        cfg["pageBinding"] = {"name": f"Liaison{i}", "type": 1,
                               "parameters": [{"name": f"Param{i}", "boundFilter": f"Extraction{i}", "fieldExpr": champ}]}
     return json.dumps(cfg, ensure_ascii=False), json.dumps(filtres, ensure_ascii=False)
 

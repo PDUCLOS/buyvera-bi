@@ -1021,7 +1021,7 @@
       "width": 1280.0
     },
     {
-      "config": "{\"objects\": {\"background\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#ECEAE3'\"}}}}}, \"transparency\": {\"expr\": {\"Literal\": {\"Value\": \"0D\"}}}}}], \"outspace\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#ECEAE3'\"}}}}}, \"transparency\": {\"expr\": {\"Literal\": {\"Value\": \"0D\"}}}}}]}, \"pageBinding\": {\"name\": \"Liaison4\", \"type\": \"Drillthrough\", \"parameters\": [{\"name\": \"Param4\", \"boundFilter\": \"Extraction4\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_fournisseur\"}}, \"Property\": \"nom\"}}}]}}",
+      "config": "{\"objects\": {\"background\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#ECEAE3'\"}}}}}, \"transparency\": {\"expr\": {\"Literal\": {\"Value\": \"0D\"}}}}}], \"outspace\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#ECEAE3'\"}}}}}, \"transparency\": {\"expr\": {\"Literal\": {\"Value\": \"0D\"}}}}}]}, \"pageBinding\": {\"name\": \"Liaison4\", \"type\": 1, \"parameters\": [{\"name\": \"Param4\", \"boundFilter\": \"Extraction4\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_fournisseur\"}}, \"Property\": \"nom\"}}}]}}",
       "displayName": "Fiche négociation",
       "displayOption": 1,
       "filters": "[{\"name\": \"Extraction4\", \"expression\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_fournisseur\"}}, \"Property\": \"nom\"}}, \"type\": \"Categorical\", \"howCreated\": 5}]",
@@ -2206,7 +2206,7 @@
       "width": 1280.0
     },
     {
-      "config": "{\"objects\": {\"background\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#ECEAE3'\"}}}}}, \"transparency\": {\"expr\": {\"Literal\": {\"Value\": \"0D\"}}}}}], \"outspace\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#ECEAE3'\"}}}}}, \"transparency\": {\"expr\": {\"Literal\": {\"Value\": \"0D\"}}}}}]}, \"pageBinding\": {\"name\": \"Liaison9\", \"type\": \"Drillthrough\", \"parameters\": [{\"name\": \"Param9\", \"boundFilter\": \"Extraction9\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_article\"}}, \"Property\": \"designation\"}}}]}}",
+      "config": "{\"objects\": {\"background\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#ECEAE3'\"}}}}}, \"transparency\": {\"expr\": {\"Literal\": {\"Value\": \"0D\"}}}}}], \"outspace\": [{\"properties\": {\"color\": {\"solid\": {\"color\": {\"expr\": {\"Literal\": {\"Value\": \"'#ECEAE3'\"}}}}}, \"transparency\": {\"expr\": {\"Literal\": {\"Value\": \"0D\"}}}}}]}, \"pageBinding\": {\"name\": \"Liaison9\", \"type\": 1, \"parameters\": [{\"name\": \"Param9\", \"boundFilter\": \"Extraction9\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_article\"}}, \"Property\": \"designation\"}}}]}}",
       "displayName": "Détail article",
       "displayOption": 1,
       "filters": "[{\"name\": \"Extraction9\", \"expression\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_article\"}}, \"Property\": \"designation\"}}, \"type\": \"Categorical\", \"howCreated\": 5}]",
