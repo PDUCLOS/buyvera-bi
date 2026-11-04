@@ -38,7 +38,12 @@ P_RETARD, P_ECART = 0.10, 0.03          # par site × article × année
 def main() -> None:
     achats = pd.read_csv(P / "fact_achats.csv", parse_dates=["date"])
     tarif = pd.read_csv(P / "fact_tarif.csv").pivot(index="article_id", columns="campagne", values="prix_brut")
-    tarif = tarif.ffill(axis=1)  # ligne tarif sans prix : on garde le dernier prix connu
+    connu = tarif.notna()  # tarif réellement publié (article présent à la campagne)
+    tarif = tarif.ffill(axis=1).bfill(axis=1)  # ligne sans prix : dernier prix connu, sinon le premier publié
+    # article dont l'unique ligne tarif est arrivée sans prix : prix médian de sa famille pour l'année
+    fam = pd.read_csv(P / "dim_article.csv").set_index("article_id")["famille_id"]
+    med = tarif.groupby(fam.reindex(tarif.index)).transform("median")
+    tarif = tarif.fillna(med)
     articles = achats["article_id"].unique()
 
     # Répartition de chaque article entre les sites
@@ -70,7 +75,7 @@ def main() -> None:
                 statut, prix = "Prix historique du site", t * (1 + prime[(e, r.article_id)])
             if (e, r.article_id, y) in ecart:
                 statut, prix = "Écart durable", t * (1 + ecart[(e, r.article_id, y)])
-            elif (e, r.article_id, y) in retard and mo <= retard[(e, r.article_id, y)] and y - 1 in tarif.columns:
+            elif (e, r.article_id, y) in retard and mo <= retard[(e, r.article_id, y)] and y - 1 in tarif.columns                     and connu.at[r.article_id, y - 1]:
                 statut, prix = "Retard d'application", tarif.at[r.article_id, y - 1]
             lignes.append({"article_id": r.article_id, "date": r.date.date(), "entite_id": e, "quantite": int(qe),
                            "prix_tarif": round(t, 2), "prix_paye": round(prix, 2), "statut_prix": statut})
@@ -87,6 +92,7 @@ def main() -> None:
     f["meilleur_prix_groupe"] = f.meilleur_prix_groupe.round(4)
     f = f.drop(columns=["annee", "montant"])
     assert f.quantite.sum() == achats.quantite.sum(), "quantités totales modifiées"
+    assert not f[["prix_tarif", "prix_paye", "meilleur_prix_groupe"]].isna().any().any(), "prix manquants"
     f.to_csv(P / "fact_achats_entite.csv", index=False)
     pd.DataFrame(ENTITES, columns=["entite_id", "nom", "pays", "origine"]).to_csv(P / "dim_entite.csv", index=False)
 

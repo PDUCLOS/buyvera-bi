@@ -36,6 +36,20 @@
   .bv-pill { display: inline-block; padding: .1rem .5rem; border-radius: 999px; font-weight: 600; white-space: nowrap; border: 1px solid currentColor; }
   .bv-bad { color: var(--bv-signal); } .bv-warn { color: var(--bv-warn); } .bv-ok { color: var(--bv-brand); }
   .bv-check { font-weight: 600; }
+  html:has(.bv) { scroll-behavior: smooth; }
+  .bv-nav { position: sticky; top: 0; z-index: 2; display: flex; gap: 2px; padding: 3px; overflow-x: auto; scrollbar-width: none;
+    background: color-mix(in srgb, var(--color-panel) 82%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--color-border-line); border-radius: 12px; width: fit-content; max-width: 100%; justify-self: center; }
+  .bv-nav a { flex: none; padding: .4rem .9rem; border-radius: 9px; font-size: var(--cds-font-size-caption); font-weight: 600;
+    color: var(--color-fg-muted); text-decoration: none; transition: background var(--cds-dur-slow), color var(--cds-dur-slow); }
+  .bv-nav a:hover, .bv-nav a:focus-visible { background: var(--bv-brand); color: var(--bv-on-brand); outline: none; }
+  .bv-section { display: grid; gap: var(--cds-gap-md); }
+  .bv-section > header h2 { margin: 0; font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); }
+  .bv-section > header p { margin: var(--cds-gap-xs) 0 0; color: var(--color-fg-muted); max-width: 72ch; line-height: 1.5; }
+  .bv-section > header p b { color: var(--color-fg); font-weight: 600; }
+  .bv-card h3 { margin: 0; font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); }
+  .bv-chart.is-short { min-height: 250px; }
+  .bv [id] { scroll-margin-top: 4rem; }
   [data-dash-source-state=empty] { color: transparent; }
   [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
   @media (prefers-reduced-motion: no-preference) {
@@ -45,6 +59,9 @@
 </style>
 
 <div class="bv">
+  <nav class="bv-nav" aria-label="Sections">
+    <a href="#synthese">Synthèse</a><a href="#nuage">Fournisseurs</a><a href="#matieres">Matières</a><a href="#prix-payes">Prix payés</a><a href="#gains">Gains</a><a href="#controle">Contrôle</a>
+  </nav>
   <header class="bv-head" id="synthese">
     <h1>Campagne 2026 : les hausses fournisseurs sont-elles justifiées ?</h1>
     <p>Les fournisseurs demandent <b data-draw="t-dem" data-source="campagnes" data-field="hausse_demandee" data-where="campagne=2026">—</b> quand l'évolution réelle des matières (indices INSEE) n'en justifie que <b data-draw="t-jus" data-source="campagnes" data-field="hausse_justifiee" data-where="campagne=2026">—</b>. L'écart représente <b data-draw="t-eur" data-source="campagnes" data-field="eur_renegociables" data-where="campagne=2026">—</b> à renégocier, dont <b data-draw="t-top" data-source="fournisseurs_2026" data-field="eur_renegociables" data-row="0">—</b> chez <b data-draw="t-topn" data-source="fournisseurs_2026" data-field="fournisseur" data-row="0">—</b>.</p>
@@ -89,9 +106,69 @@
     </div>
   </article>
 
+  <section class="bv-section" id="prix-payes" aria-labelledby="h-prix">
+    <header>
+      <h2 id="h-prix">Prix payés dans le groupe</h2>
+      <p>Le même article, acheté par trois sites : chaque euro payé au-dessus du meilleur prix du groupe est un écart à aligner. <b data-draw="g-top" data-source="groupe_sites" data-field="site" data-row="0">—</b>, site racheté, en porte la plus grande part.</p>
+    </header>
+    <div class="bv-kpis">
+      <div class="bv-kpi is-key"><span>Surcoût vs meilleur prix du groupe</span><strong data-draw="g-surcout" data-source="groupe_total" data-field="surcout" data-row="0">—</strong><small>2023 → 2026, 3 sites</small></div>
+      <div class="bv-kpi"><span>Part du montant payé</span><strong data-draw="g-pct" data-source="groupe_total" data-field="pct_surcout" data-row="0">—</strong><small>surcoût ÷ montant payé</small></div>
+      <div class="bv-kpi"><span>Payé au-dessus du tarif (ERP)</span><strong data-draw="g-trop" data-source="groupe_total" data-field="paye_en_trop" data-row="0">—</strong><small>retards d'application et prix mal saisis</small></div>
+    </div>
+    <div class="bv-grid">
+      <article class="bv-card" id="sites">
+        <h3>Surcoût par site</h3>
+        <p>Les sites rachetés gardent souvent leurs contrats historiques, au-dessus du tarif groupe.</p>
+        <div class="bv-chart is-short" data-draw="sites" data-source="groupe_sites"></div>
+      </article>
+      <article class="bv-card" id="aligner">
+        <h3>Les 10 articles à aligner en premier</h3>
+        <p>Article × site, classés par surcoût : à traiter au prochain rendez-vous fournisseur.</p>
+        <div class="bv-wrap">
+          <table data-source="groupe_articles" data-row-key="cle">
+            <thead><tr><th data-field="article">Article</th><th data-field="site">Site</th><th data-field="statut">Cause</th><th class="num" data-field="surcout">Surcoût</th></tr></thead>
+            <tbody data-draw="aligner"></tbody>
+          </table>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="bv-section" id="gains" aria-labelledby="h-gains">
+    <header>
+      <h2 id="h-gains">Ce que la négociation a rapporté</h2>
+      <p>Pour chaque campagne : ce qui était renégociable (écart à la hausse justifiée) et ce qui a été obtenu. Le taux de transformation dit quelle part de l'argument a été gagnée.</p>
+    </header>
+    <div class="bv-kpis">
+      <div class="bv-kpi is-key"><span>Économies obtenues · 2024 → 2026</span><strong data-draw="n-eco" data-source="gains_total" data-field="economies" data-row="0">—</strong><small>hausse évitée × valeur achetée</small></div>
+      <div class="bv-kpi"><span>Potentiel renégociable</span><strong data-draw="n-pot" data-source="gains_total" data-field="potentiel" data-row="0">—</strong><small>somme des 3 campagnes</small></div>
+      <div class="bv-kpi"><span>Taux de transformation</span><strong data-draw="n-taux" data-source="gains_total" data-field="taux_transformation" data-row="0">—</strong><small>économies ÷ potentiel</small></div>
+      <div class="bv-kpi"><span>Hausse accordée en 2026</span><strong data-draw="n-obt" data-source="gains_campagnes" data-field="hausse_obtenue" data-where="campagne=2026">—</strong><small>demandée : <span data-draw="n-dem" data-source="gains_campagnes" data-field="hausse_demandee" data-where="campagne=2026">—</span></small></div>
+    </div>
+    <div class="bv-grid">
+      <article class="bv-card" id="gains-campagnes">
+        <h3>Potentiel et économies par campagne</h3>
+        <p>Au-dessus de chaque paire : le taux de transformation.</p>
+        <div class="bv-legend"><span><i class="bv-dot-pot"></i>Potentiel renégociable</span><span><i class="bv-dot-ok"></i>Économies obtenues</span></div>
+        <div class="bv-chart is-short" data-draw="gains" data-source="gains_campagnes"></div>
+      </article>
+      <article class="bv-card" id="gains-fournisseurs">
+        <h3>Par fournisseur, 2024 → 2026</h3>
+        <p>Hausses pondérées par la valeur achetée. Un taux faible sur un gros potentiel : argument à muscler.</p>
+        <div class="bv-wrap">
+          <table data-source="gains_fournisseurs" data-row-key="fournisseur">
+            <thead><tr><th data-field="fournisseur">Fournisseur</th><th class="num" data-field="hausse_demandee">Demandée</th><th class="num" data-field="hausse_obtenue">Obtenue</th><th class="num" data-field="economies">Économies</th><th class="num" data-field="taux_transformation">Taux</th></tr></thead>
+            <tbody data-draw="gfour"></tbody>
+          </table>
+        </div>
+      </article>
+    </div>
+  </section>
+
   <article class="bv-card" id="controle">
     <h2>Contrôle croisé avec Power BI</h2>
-    <p>Les 5 chiffres clés recalculés ici en Python à partir des mêmes CSV, comparés aux mesures DAX relevées dans le modèle Power BI. Écart nul attendu : c'est la preuve que les deux outils appliquent la même définition.</p>
+    <p>Les 7 chiffres clés recalculés ici en Python à partir des mêmes CSV, comparés aux mesures DAX relevées dans le modèle Power BI. Écart nul attendu : c'est la preuve que les deux outils appliquent la même définition.</p>
     <div class="bv-wrap">
       <table data-source="controle" data-row-key="indicateur">
         <thead><tr><th data-field="libelle">Indicateur</th><th class="num" data-field="claude">Tableau de bord Claude</th><th class="num" data-field="powerbi">Power BI (DAX)</th><th class="num" data-field="ecart">Écart</th><th data-field="verdict">Résultat</th></tr></thead>
@@ -130,6 +207,17 @@
   one('k-jus', 'campagnes', camp('2026', 'hausse_justifiee'), pct);
   one('k-ecart', 'campagnes', camp('2026', 'ecart_pts'), pts);
   one('k-2027', 'campagnes', camp('2026', 'plafond_prochaine'), pct);
+  const first = (f) => (r) => (r[0] ? r[0][f] : null);
+  const pct0 = (v) => L.format('.1%')(v).replace('%', ' %');
+  one('g-top', 'groupe_sites', first('site'), (v) => v);
+  one('g-surcout', 'groupe_total', first('surcout'), keur);
+  one('g-pct', 'groupe_total', first('pct_surcout'), pct0);
+  one('g-trop', 'groupe_total', first('paye_en_trop'), keur);
+  one('n-eco', 'gains_total', first('economies'), keur);
+  one('n-pot', 'gains_total', first('potentiel'), keur);
+  one('n-taux', 'gains_total', first('taux_transformation'), (v) => L.format('.0%')(v).replace('%', ' %'));
+  one('n-obt', 'gains_campagnes', camp('2026', 'hausse_obtenue'), pct);
+  one('n-dem', 'gains_campagnes', camp('2026', 'hausse_demandee'), pct);
 </script>
 
 <script>
@@ -150,11 +238,32 @@
     }),
   });
 
+  dash.calc('groupe_total', {
+    title: 'Total groupe',
+    description: 'Somme des 3 sites : surcoût, montant payé, part du surcoût, payé au-dessus du tarif.',
+    inputs: ['groupe_sites'],
+    fn: (groupe_sites) => {
+      const s = (f) => groupe_sites.reduce((a, r) => a + Number(r[f]), 0);
+      return [{ surcout: s('surcout'), montant: s('montant'), pct_surcout: s('surcout') / s('montant'), paye_en_trop: s('paye_en_trop') }];
+    },
+  });
+
+  dash.calc('gains_total', {
+    title: 'Gains cumulés',
+    description: 'Économies et potentiel des campagnes 2024 à 2026, et leur rapport.',
+    inputs: ['gains_campagnes'],
+    fn: (gains_campagnes) => {
+      const s = (f) => gains_campagnes.reduce((a, r) => a + Number(r[f]), 0);
+      return [{ economies: s('economies'), potentiel: s('potentiel'), taux_transformation: s('economies') / s('potentiel') }];
+    },
+  });
+
   dash.calc('controle', {
     title: 'Contrôle croisé Claude / Power BI',
     description: 'Chaque chiffre clé recalculé ici, face à la valeur DAX relevée dans Power BI.',
-    inputs: ['controle_powerbi', 'campagnes', 'fournisseurs_2026'],
-    fn: (controle_powerbi, campagnes, fournisseurs_2026) => {
+    inputs: ['controle_powerbi', 'campagnes', 'fournisseurs_2026', 'groupe_sites', 'gains_campagnes'],
+    fn: (controle_powerbi, campagnes, fournisseurs_2026, groupe_sites, gains_campagnes) => {
+      const somme = (rows, f) => rows.reduce((a, r) => a + Number(r[f]), 0);
       const c26 = campagnes.find((c) => String(c.campagne) === '2026') || {};
       const orl = fournisseurs_2026.find((f) => f.fournisseur === 'Orlenza Thermique') || {};
       const claude = {
@@ -163,17 +272,21 @@
         eur_renegociables_2026: Number(c26.eur_renegociables),
         eur_orlenza_2026: Number(orl.eur_renegociables),
         plafond_2027: Number(c26.plafond_prochaine),
+        surcout_groupe: somme(groupe_sites, 'surcout'),
+        economies_obtenues: somme(gains_campagnes, 'economies'),
       };
       const libelles = {
         hausse_demandee_2026: 'Hausse demandée 2026', hausse_justifiee_2026: 'Hausse justifiée 2026',
         eur_renegociables_2026: '€ renégociables 2026', eur_orlenza_2026: '€ renégociables Orlenza Thermique',
         plafond_2027: 'Hausse déjà justifiée pour 2027',
+        surcout_groupe: 'Surcoût vs meilleur prix du groupe', economies_obtenues: 'Économies obtenues 2024 → 2026',
       };
+      const enEuros = (i) => i.startsWith('eur') || i === 'surcout_groupe' || i === 'economies_obtenues';
       return controle_powerbi.map((r) => {
         const pb = Number(r.valeur_powerbi), cl = claude[r.indicateur];
         const ecart = cl - pb;
-        const tol = r.indicateur.startsWith('eur') ? 0.5 : 0.00001;
-        return { indicateur: r.indicateur, libelle: libelles[r.indicateur] || r.indicateur, claude: cl, powerbi: pb,
+        const tol = enEuros(r.indicateur) ? 0.5 : 0.00001;
+        return { indicateur: r.indicateur, euros: enEuros(r.indicateur), libelle: libelles[r.indicateur] || r.indicateur, claude: cl, powerbi: pb,
                  ecart, verdict: Math.abs(ecart) <= tol ? 'Identique' : 'Différent' };
       });
     },
@@ -187,6 +300,7 @@
   document.querySelectorAll('.bv-dot-bad').forEach((e) => { e.style.background = cssVar('--bv-signal'); });
   document.querySelectorAll('.bv-dot-warn').forEach((e) => { e.style.background = cssVar('--bv-warn'); });
   document.querySelectorAll('.bv-dot-ok').forEach((e) => { e.style.background = cssVar('--bv-brand'); });
+  document.querySelectorAll('.bv-dot-pot').forEach((e) => { e.style.background = cssVar('--bv-mint'); });
   let animer = true;
 
   dash.draw('scatter', (el) => {
@@ -283,12 +397,102 @@
     d.data.forEach((k) => {
       const tr = tb.insertRow();
       tr.dataset.key = k.indicateur;
-      const f = k.indicateur.startsWith('eur') ? (v) => F.eur(v) : (v) => F.pct(v);
+      const f = k.euros ? (v) => F.eur(v) : (v) => F.pct(v);
       cellule(tr, k.libelle);
       cellule(tr, f(k.claude), 'num');
       cellule(tr, f(k.powerbi), 'num');
-      cellule(tr, k.indicateur.startsWith('eur') ? F.eur(k.ecart) : (k.ecart * 100).toFixed(4).replace('.', ',') + ' pt', 'num');
+      cellule(tr, k.euros ? F.eur(k.ecart) : (k.ecart * 100).toFixed(4).replace('.', ',') + ' pt', 'num');
       cellule(tr, (k.verdict === 'Identique' ? '✓ ' : '✗ ') + k.verdict, 'bv-check ' + (k.verdict === 'Identique' ? 'bv-ok' : 'bv-bad'));
+    });
+  });
+
+  const pctG = (v) => L.format('.1%')(v).replace('%', ' %');
+  const axeStyle = (g, grille) => { g.attr('font-size', null).attr('font-family', null); g.select('.domain').remove();
+    g.selectAll('line').attr('stroke', grille ? 'var(--cds-chart-grid)' : 'var(--cds-chart-axis)'); g.selectAll('text').attr('fill', 'var(--color-fg-muted)'); };
+  const bulle = (el) => d3.select(el).append('div').attr('class', 'bv-tip').style('opacity', 0);
+  const placer = (tip, el, ev) => { const [px, py] = d3.pointer(ev, el); const w = tip.node().offsetWidth;
+    tip.style('left', `${Math.min(Math.max(px + 12, 0), el.clientWidth - w - 4)}px`).style('top', `${Math.max(py - 52, 0)}px`).style('opacity', 1); };
+  let animerSites = true;
+
+  dash.draw('sites', (el) => {
+    const d = dash.data('groupe_sites');
+    el.replaceChildren();
+    if (d.status !== 'ok') { el.textContent = '—'; return; }
+    const rows = d.data.map((q) => ({ ...q, v: +q.surcout, p: +q.pct_surcout }));
+    const W = Math.max(el.clientWidth, 280), H = 230, m = { t: 8, r: 70, b: 28, l: 118 };
+    const x = d3.scaleLinear([0, d3.max(rows, (q) => q.v)], [m.l, W - m.r]).nice();
+    const y = d3.scaleBand(rows.map((q) => q.site), [m.t, H - m.b]).padding(0.38);
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Surcoût par site');
+    svg.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(4).tickSize(-(H - m.t - m.b)).tickFormat((v) => keur(v))).call((g) => axeStyle(g, true));
+    svg.append('g').selectAll('text').data(rows).join('text').attr('x', m.l - 10).attr('y', (q) => y(q.site) + y.bandwidth() / 2).attr('dy', '0.32em')
+      .attr('text-anchor', 'end').attr('fill', 'var(--color-fg)').attr('font-size', 'var(--cds-font-size-caption)').text((q) => q.site);
+    const tip = bulle(el);
+    const barres = svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', m.l).attr('y', (q) => y(q.site)).attr('height', y.bandwidth()).attr('rx', 4)
+      .attr('fill', 'var(--bv-brand)').attr('width', (q) => (animerSites ? 0 : x(q.v) - m.l));
+    barres.on('pointerenter pointermove', (ev, q) => { tip.replaceChildren(); tip.append('b').text(q.site);
+        tip.append('div').text(`${F.eur(q.v)} de surcoût · ${pctG(q.p)} du montant payé`);
+        tip.append('div').text(`${q.articles_a_corriger} articles mal tarifés dans l'ERP`); placer(tip, el, ev); })
+      .on('pointerleave', () => tip.style('opacity', 0));
+    if (animerSites && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      barres.transition().duration(700).ease(d3.easeCubicOut).attr('width', (q) => x(q.v) - m.l);
+    } else { barres.attr('width', (q) => x(q.v) - m.l); }
+    svg.append('g').selectAll('text').data(rows).join('text').attr('x', (q) => x(q.v) + 6).attr('y', (q) => y(q.site) + y.bandwidth() / 2).attr('dy', '0.32em')
+      .attr('fill', 'var(--color-fg-muted)').attr('font-size', 'var(--cds-font-size-caption)').text((q) => keur(q.v));
+    animerSites = false;
+  });
+
+  dash.draw('gains', (el) => {
+    const d = dash.data('gains_campagnes');
+    el.replaceChildren();
+    if (d.status !== 'ok') { el.textContent = '—'; return; }
+    const rows = d.data.map((q) => ({ c: String(q.campagne), pot: +q.potentiel, eco: +q.economies, t: +q.taux_transformation }));
+    const W = Math.max(el.clientWidth, 280), H = 240, m = { t: 22, r: 12, b: 28, l: 56 };
+    const x = d3.scaleBand(rows.map((q) => q.c), [m.l, W - m.r]).padding(0.3);
+    const xi = d3.scaleBand(['pot', 'eco'], [0, x.bandwidth()]).padding(0.08);
+    const y = d3.scaleLinear([0, d3.max(rows, (q) => q.pot)], [H - m.b, m.t]).nice();
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Potentiel et économies par campagne');
+    svg.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(4).tickSize(-(W - m.l - m.r)).tickFormat((v) => keur(v))).call((g) => axeStyle(g, true));
+    svg.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).tickSize(0)).call((g) => axeStyle(g, false));
+    const tip = bulle(el);
+    const grp = svg.append('g').selectAll('g').data(rows).join('g').attr('transform', (q) => `translate(${x(q.c)},0)`);
+    grp.selectAll('rect').data((q) => [{ k: 'pot', v: q.pot, q }, { k: 'eco', v: q.eco, q }]).join('rect')
+      .attr('x', (b) => xi(b.k)).attr('width', xi.bandwidth()).attr('rx', 4)
+      .attr('fill', (b) => (b.k === 'pot' ? 'var(--bv-mint)' : 'var(--bv-brand)'))
+      .attr('y', (b) => y(b.v)).attr('height', (b) => y(0) - y(b.v))
+      .on('pointerenter pointermove', (ev, b) => { tip.replaceChildren(); tip.append('b').text(`Campagne ${b.q.c}`);
+        tip.append('div').text(`Potentiel ${F.eur(b.q.pot)} · obtenu ${F.eur(b.q.eco)}`);
+        tip.append('div').text(`Taux de transformation ${L.format('.0%')(b.q.t).replace('%', ' %')}`); placer(tip, el, ev); })
+      .on('pointerleave', () => tip.style('opacity', 0));
+    grp.append('text').attr('x', x.bandwidth() / 2).attr('y', (q) => y(q.pot) - 7).attr('text-anchor', 'middle')
+      .attr('fill', 'var(--color-fg)').attr('font-size', 'var(--cds-font-size-caption)').attr('font-weight', 600)
+      .text((q) => L.format('.0%')(q.t).replace('%', ' %'));
+  });
+
+  dash.draw('aligner', (tb) => {
+    const d = dash.data('groupe_articles');
+    tb.replaceChildren();
+    if (d.status !== 'ok') return;
+    d.data.forEach((a) => {
+      const tr = tb.insertRow();
+      tr.dataset.key = a.cle;
+      cellule(tr, a.article);
+      cellule(tr, a.site);
+      cellule(tr, a.statut);
+      cellule(tr, F.eur(+a.surcout), 'num');
+    });
+  });
+
+  dash.draw('gfour', (tb) => {
+    const d = dash.data('gains_fournisseurs');
+    tb.replaceChildren();
+    if (d.status !== 'ok') return;
+    d.data.forEach((f) => {
+      const tr = tb.insertRow();
+      cellule(tr, f.fournisseur);
+      cellule(tr, F.pct(+f.hausse_demandee), 'num');
+      cellule(tr, F.pct(+f.hausse_obtenue), 'num');
+      cellule(tr, F.eur(+f.economies), 'num');
+      cellule(tr, f.taux_transformation === '' || f.taux_transformation == null ? '—' : L.format('.0%')(+f.taux_transformation).replace('%', ' %'), 'num');
     });
   });
 </script>

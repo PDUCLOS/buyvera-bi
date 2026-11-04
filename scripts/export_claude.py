@@ -2,7 +2,10 @@
 
 Prérequis : precalcul_hausses.py. Sorties claude-dashboard/ :
 - campagnes.csv, fournisseurs_2026.csv, matieres.csv : calculés ici en pandas, indépendamment du DAX
-- controle_powerbi.csv : les 5 chiffres clés lus dans le modèle ouvert dans Power BI Desktop
+- groupe_sites.csv, groupe_articles.csv : vision groupe (generate_groupe.py), surcoût vs meilleur prix du groupe
+  et tarifs mal appliqués dans les ERP
+- gains_campagnes.csv, gains_fournisseurs.csv : résultats de négociation (économies, taux de transformation)
+- controle_powerbi.csv : les 7 chiffres clés lus dans le modèle ouvert dans Power BI Desktop
   (scripts/dax_query.ps1). Si Desktop n'est pas ouvert, le fichier existant est conservé.
 """
 from __future__ import annotations
@@ -101,12 +104,57 @@ def main() -> None:
                      "acquis_prochaine": acq, "signal": sig, "dernier_mois": last.strftime("%Y-%m")})
     pd.DataFrame(rows).round(6).to_csv(OUT / "matieres.csv", index=False)
 
+    exporter_groupe_gains()
     lire_powerbi()
     print("Exports écrits dans", OUT)
 
 
+def exporter_groupe_gains() -> None:
+    """Vision groupe (prix payés par site) et gains de négociation."""
+    ent = pd.read_csv(P / "dim_entite.csv")
+    ach = pd.read_csv(P / "fact_achats_entite.csv").merge(ent, on="entite_id")
+    ach["montant"] = ach["quantite"] * ach["prix_paye"]
+    retard = ach["statut_prix"] == "Retard d'application"
+    durable = ach["statut_prix"] == "Écart durable"
+    ach["ecart_retard"] = ach["ecart_application"].where(retard, 0)
+    ach["ecart_durable"] = ach["ecart_application"].where(durable, 0)
+    ach["paye_en_trop"] = ach["ecart_application"].clip(lower=0)
+    sites = ach.groupby(["nom", "origine"]).agg(
+        montant=("montant", "sum"), surcout=("surcout_vs_meilleur", "sum"), ecart_retard=("ecart_retard", "sum"),
+        ecart_durable=("ecart_durable", "sum"), paye_en_trop=("paye_en_trop", "sum")).reset_index()
+    a_corriger = ach[retard | durable].groupby("nom")["article_id"].nunique()
+    sites["articles_a_corriger"] = sites["nom"].map(a_corriger).fillna(0).astype(int)
+    sites["pct_surcout"] = sites["surcout"] / sites["montant"]
+    sites = sites.rename(columns={"nom": "site"}).sort_values("surcout", ascending=False)
+    sites.round(6).to_csv(OUT / "groupe_sites.csv", index=False)
+
+    lib = pd.read_csv(P / "dim_article.csv")[["article_id", "designation"]]
+    art = (ach.groupby(["article_id", "nom"]).agg(surcout=("surcout_vs_meilleur", "sum"),
+                                                  statut=("statut_prix", lambda s: s.value_counts().index[0]))
+           .reset_index().merge(lib, on="article_id").sort_values("surcout", ascending=False).head(10))
+    art["cle"] = art["article_id"] + "-" + art["nom"]
+    art = art.rename(columns={"nom": "site", "designation": "article"})
+    art[["cle", "article", "site", "statut", "surcout"]].round(2).to_csv(OUT / "groupe_articles.csv", index=False)
+
+    neg = pd.read_csv(P / "fact_negociation.csv").merge(
+        pd.read_csv(P / "dim_fournisseur.csv")[["fournisseur_id", "nom"]], on="fournisseur_id")
+    def agg(d: pd.DataFrame) -> pd.Series:
+        v = d["valeur_n"]
+        return pd.Series({"valeur_n": v.sum(),
+                          "hausse_demandee": (d["hausse_demandee"] * v).sum() / v.sum(),
+                          "hausse_justifiee": (d["hausse_justifiee"] * v).sum() / v.sum(),
+                          "hausse_obtenue": (d["hausse_obtenue"] * v).sum() / v.sum(),
+                          "potentiel": d["eur_renegociables"].sum(), "economies": d["economie_eur"].sum()})
+    camp = neg.groupby("campagne").apply(agg, include_groups=False).reset_index()
+    camp["taux_transformation"] = camp["economies"] / camp["potentiel"]
+    camp.round(6).to_csv(OUT / "gains_campagnes.csv", index=False)
+    fou = neg.groupby("nom").apply(agg, include_groups=False).reset_index().rename(columns={"nom": "fournisseur"})
+    fou["taux_transformation"] = (fou["economies"] / fou["potentiel"]).where(fou["potentiel"] > 0)
+    fou.sort_values("economies", ascending=False).round(6).to_csv(OUT / "gains_fournisseurs.csv", index=False)
+
+
 def lire_powerbi() -> None:
-    """Relève les 5 chiffres clés dans le modèle Power BI ouvert (moteur local)."""
+    """Relève les 7 chiffres clés dans le modèle Power BI ouvert (moteur local)."""
     dax = RACINE / "tests" / "dax" / "10_controle_croise.dax"
     try:
         r = subprocess.run(["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
