@@ -61,3 +61,27 @@ relationship f0887a0c-83e9-5757-9d0b-db1fbb76eb58
 relationship aa8da21c-78d8-5931-bc11-a479d061ff46
 	fromColumn: fact_indice_fournisseur.date
 	toColumn: dim_date.date
+
+relationship 4aea2248-7bc2-54c5-89ad-ee70e9afa10a
+	fromColumn: ml_prevision_indices.matiere_id
+	toColumn: dim_matiere.matiere_id
+
+relationship 58ff6fee-eb78-5494-8d0c-1b19c2daf79e
+	fromColumn: ml_prevision_indices.date
+	toColumn: dim_date.date
+
+relationship a3086aab-0c66-500d-b115-a2fb3c5caa45
+	fromColumn: ml_variation_2027.matiere
+	toColumn: dim_matiere.matiere_id
+
+relationship 078125ae-4ae7-5f67-8e1a-99b6eec64153
+	fromColumn: ml_plafond_2027.fournisseur_id
+	toColumn: dim_fournisseur.fournisseur_id
+
+relationship 871b8ee7-df2a-5770-bd63-dfbc406d7ad4
+	fromColumn: ml_segments_fournisseurs.fournisseur_id
+	toColumn: dim_fournisseur.fournisseur_id
+
+relationship 74fb103b-78e2-54ed-af88-4f87f533d9dc
+	fromColumn: ml_anomalies_tarif.article_id
+	toColumn: dim_article.article_id

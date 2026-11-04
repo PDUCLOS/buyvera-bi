@@ -1,0 +1,94 @@
+/// Machine learning (scripts/ml_predictions.py) : lignes du tarif 2026 isolées par Isolation Forest (hausse atypique pour sa famille).
+table ml_anomalies_tarif
+	lineageTag: fd118a19-b5e6-5a46-a4e6-32b01503e355
+
+	/// Article.
+	column article_id
+		dataType: string
+		isHidden
+		lineageTag: a469a3ac-48a3-5c6a-a284-9b6ac226ac75
+		summarizeBy: none
+		sourceColumn: article_id
+
+		annotation SummarizationSetBy = User
+
+	/// Fournisseur.
+	column fournisseur_id
+		dataType: string
+		isHidden
+		lineageTag: 96a0968d-16e2-5580-b406-681530fdfb53
+		summarizeBy: none
+		sourceColumn: fournisseur_id
+
+		annotation SummarizationSetBy = User
+
+	/// Hausse demandée de la ligne.
+	column demandee
+		dataType: double
+		isHidden
+		lineageTag: 00d70f76-3a70-5ffe-9f4c-d80e6d195095
+		summarizeBy: none
+		sourceColumn: demandee
+
+		annotation SummarizationSetBy = User
+
+	/// Hausse justifiée de la ligne.
+	column hausse_justifiee
+		dataType: double
+		isHidden
+		lineageTag: ec6b6bf0-0bbe-50bf-b4cc-baf36339dfa9
+		summarizeBy: none
+		sourceColumn: hausse_justifiee
+
+		annotation SummarizationSetBy = User
+
+	/// Écart.
+	column ecart
+		dataType: double
+		isHidden
+		lineageTag: fff25bf8-d9fa-5e7d-a239-1b875d75e422
+		summarizeBy: none
+		sourceColumn: ecart
+
+		annotation SummarizationSetBy = User
+
+	/// Score d'anomalie (plus haut = plus atypique).
+	column score_anomalie
+		dataType: double
+		isHidden
+		lineageTag: 9c30fed2-228f-5ad6-bb97-2001ff840804
+		summarizeBy: none
+		sourceColumn: score_anomalie
+
+		annotation SummarizationSetBy = User
+
+	/// Vrai si la ligne est isolée.
+	column anomalie
+		dataType: boolean
+		lineageTag: 5c615fd7-fce2-5c0b-99bc-5527f507ca44
+		summarizeBy: none
+		sourceColumn: anomalie
+
+		annotation SummarizationSetBy = User
+
+	/// Écart positif × prix N × volume N.
+	column enjeu_eur
+		dataType: double
+		isHidden
+		lineageTag: 63fd1f52-b20f-5e64-8769-a0d4242cdeed
+		summarizeBy: none
+		sourceColumn: enjeu_eur
+
+		annotation SummarizationSetBy = User
+
+	partition ml_anomalies_tarif = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document ( File.Contents ( DossierDonnees & "ml_anomalies_tarif.csv" ), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv] ),
+				    Entetes = Table.PromoteHeaders ( Source, [PromoteAllScalars = true] ),
+				    Types = Table.TransformColumnTypes ( Entetes, {{"article_id", type text}, {"fournisseur_id", type text}, {"demandee", type number}, {"hausse_justifiee", type number}, {"ecart", type number}, {"score_anomalie", type number}, {"anomalie", type logical}, {"enjeu_eur", type number}}, "en-US" )
+				in
+				    Types
+
+	annotation PBI_ResultType = Table

@@ -191,6 +191,48 @@ TABLES["dim_date"].setdefault("calc_cols", []).append(
     ("mois_court", S, "Mois en clair sans l'année (axe des comparaisons année sur année).",
      'FORMAT ( dim_date[date], "mmm" )', dict(sort="mois")))
 
+ML = "Machine learning (scripts/ml_predictions.py) : "
+TABLES["ml_prevision_indices"] = dict(
+    desc=ML + "prévision des indices matières octobre-décembre 2026 (modèle retenu au backtest) et intervalle à 80 %.",
+    cols=[("matiere_id", S, "Matière.", dict(hidden=True)),
+          ("date", DT, "Mois prévu (1er du mois).", dict(hidden=True, fmt="Short Date")),
+          ("horizon_mois", I, "Mois d'avance.", dict(hidden=True)),
+          ("prevision", D, "Indice prévu.", dict(hidden=True)),
+          ("bas_80", D, "Borne basse à 80 %.", dict(hidden=True)),
+          ("haut_80", D, "Borne haute à 80 %.", dict(hidden=True)),
+          ("modele", S, "Modèle retenu (le naïf si aucun ne le bat).", {})])
+TABLES["ml_variation_2027"] = dict(
+    desc=ML + "variation matière attendue pour la campagne 2027, fenêtre juillet-décembre 2026 complétée par la prévision.",
+    cols=[("matiere", S, "Matière.", dict(hidden=True)),
+          ("variation_centrale", D, "Variation centrale.", dict(hidden=True)),
+          ("variation_basse", D, "Borne basse à 80 %.", dict(hidden=True)),
+          ("variation_haute", D, "Borne haute à 80 %.", dict(hidden=True))])
+TABLES["ml_plafond_2027"] = dict(
+    desc=ML + "plafond de hausse justifiable 2027 projeté par fournisseur (central et fourchette à 80 %).",
+    cols=[("fournisseur_id", S, "Fournisseur.", dict(hidden=True)),
+          ("poids", D, "Prix 2026 × volume 2025 du panier.", dict(hidden=True)),
+          ("plafond_central", D, "Plafond projeté.", dict(hidden=True)),
+          ("plafond_bas", D, "Borne basse.", dict(hidden=True)),
+          ("plafond_haut", D, "Borne haute.", dict(hidden=True))])
+TABLES["ml_segments_fournisseurs"] = dict(
+    desc=ML + "segment de comportement tarifaire trouvé par KMeans (non supervisé).",
+    cols=[("fournisseur_id", S, "Fournisseur.", dict(hidden=True)),
+          ("segment_nom", S, "Segment trouvé : aligné, opportuniste, cliquet, références instables.", {}),
+          ("ecart_moyen", D, "Écart moyen demandé − justifié sur 3 campagnes.", dict(hidden=True)),
+          ("ecart_regularite", D, "Écart-type de l'écart.", dict(hidden=True)),
+          ("part_cliquet", D, "Part des campagnes en effet cliquet.", dict(hidden=True)),
+          ("rattachement_auto", D, "Taux de rattachement automatique.", dict(hidden=True))])
+TABLES["ml_anomalies_tarif"] = dict(
+    desc=ML + "lignes du tarif 2026 isolées par Isolation Forest (hausse atypique pour sa famille).",
+    cols=[("article_id", S, "Article.", dict(hidden=True)),
+          ("fournisseur_id", S, "Fournisseur.", dict(hidden=True)),
+          ("demandee", D, "Hausse demandée de la ligne.", dict(hidden=True)),
+          ("hausse_justifiee", D, "Hausse justifiée de la ligne.", dict(hidden=True)),
+          ("ecart", D, "Écart.", dict(hidden=True)),
+          ("score_anomalie", D, "Score d'anomalie (plus haut = plus atypique).", dict(hidden=True)),
+          ("anomalie", B, "Vrai si la ligne est isolée.", {}),
+          ("enjeu_eur", D, "Écart positif × prix N × volume N.", dict(hidden=True))])
+
 # Relations : (table plusieurs, colonne, table un, colonne). Toutes 1→N, filtrage unidirectionnel.
 RELATIONS = [
     ("fact_tarif", "article_id", "dim_article", "article_id"),
@@ -209,6 +251,12 @@ RELATIONS = [
     ("fact_impact_matiere", "matiere_id", "dim_matiere", "matiere_id"),
     ("fact_indice_fournisseur", "fournisseur_id", "dim_fournisseur", "fournisseur_id"),
     ("fact_indice_fournisseur", "date", "dim_date", "date"),
+    ("ml_prevision_indices", "matiere_id", "dim_matiere", "matiere_id"),
+    ("ml_prevision_indices", "date", "dim_date", "date"),
+    ("ml_variation_2027", "matiere", "dim_matiere", "matiere_id"),
+    ("ml_plafond_2027", "fournisseur_id", "dim_fournisseur", "fournisseur_id"),
+    ("ml_segments_fournisseurs", "fournisseur_id", "dim_fournisseur", "fournisseur_id"),
+    ("ml_anomalies_tarif", "article_id", "dim_article", "article_id"),
 ]
 
 # Tables de paramètres (déconnectées) : nom → (colonne, valeurs, valeur par défaut, description)
@@ -670,6 +718,41 @@ RETURN
      "[Prochaine campagne] & \" : \" & FORMAT ( [Plafond justifié prochaine campagne %], \"+0.0 %\" )"),
     ("Nb fournisseurs à renégocier", "6. Négociation", "0", "Fournisseurs dont l'écart dépasse 3 points.",
      "COUNTROWS ( FILTER ( VALUES ( dim_fournisseur[nom] ), [Écart pts] > 3 ) )"),
+    ("Prévision indice", "10. Prévisions ML", "#,0.0", "Indice prévu par le modèle retenu au backtest.",
+     "AVERAGE ( ml_prevision_indices[prevision] )"),
+    ("Prévision basse 80 %", "10. Prévisions ML", "#,0.0", "Borne basse de l'intervalle à 80 %.",
+     "AVERAGE ( ml_prevision_indices[bas_80] )"),
+    ("Prévision haute 80 %", "10. Prévisions ML", "#,0.0", "Borne haute de l'intervalle à 80 %.",
+     "AVERAGE ( ml_prevision_indices[haut_80] )"),
+    ("Variation 2027 attendue %", "10. Prévisions ML", "+0.0%;-0.0%;0.0%",
+     "Variation matière attendue pour 2027 (fenêtre juillet-décembre 2026 complétée par la prévision).",
+     "AVERAGE ( ml_variation_2027[variation_centrale] )"),
+    ("Fourchette 2027", "10. Prévisions ML", "", "Fourchette à 80 % de la variation 2027 attendue.",
+     """VAR _b = AVERAGE ( ml_variation_2027[variation_basse] )
+VAR _h = AVERAGE ( ml_variation_2027[variation_haute] )
+RETURN
+    IF ( NOT ISBLANK ( _b ), FORMAT ( _b, "+0.0 %;-0.0 %" ) & " à " & FORMAT ( _h, "+0.0 %;-0.0 %" ) )"""),
+    ("Plafond 2027 projeté %", "10. Prévisions ML", "+0.0%;-0.0%;0.0%",
+     "Hausse justifiable 2027 projetée, pondérée par prix 2026 × volume 2025.",
+     "DIVIDE ( SUMX ( ml_plafond_2027, ml_plafond_2027[poids] * ml_plafond_2027[plafond_central] ), SUM ( ml_plafond_2027[poids] ) )"),
+    ("Fourchette plafond 2027", "10. Prévisions ML", "", "Fourchette à 80 % du plafond 2027 projeté.",
+     """VAR _w = SUM ( ml_plafond_2027[poids] )
+VAR _b = DIVIDE ( SUMX ( ml_plafond_2027, ml_plafond_2027[poids] * ml_plafond_2027[plafond_bas] ), _w )
+VAR _h = DIVIDE ( SUMX ( ml_plafond_2027, ml_plafond_2027[poids] * ml_plafond_2027[plafond_haut] ), _w )
+RETURN
+    IF ( NOT ISBLANK ( _b ), FORMAT ( _b, "+0.0 %;-0.0 %" ) & " à " & FORMAT ( _h, "+0.0 %;-0.0 %" ) )"""),
+    ("Segment ML", "10. Prévisions ML", "", "Segment de comportement tarifaire du fournisseur (KMeans).",
+     "SELECTEDVALUE ( ml_segments_fournisseurs[segment_nom] )"),
+    ("Écart moyen 3 campagnes (pts)", "10. Prévisions ML", "+0.0;-0.0;0.0", "Écart moyen demandé − justifié sur 3 campagnes.",
+     "AVERAGE ( ml_segments_fournisseurs[ecart_moyen] ) * 100"),
+    ("Lignes anormales", "10. Prévisions ML", "#,0", "Lignes du tarif 2026 isolées en hausse excessive.",
+     "CALCULATE ( COUNTROWS ( ml_anomalies_tarif ), ml_anomalies_tarif[anomalie] = TRUE (), ml_anomalies_tarif[ecart] > 0 )"),
+    ("€ lignes anormales", "10. Prévisions ML", "#,0 €", "Écart en euros des lignes isolées en hausse excessive.",
+     "CALCULATE ( SUM ( ml_anomalies_tarif[enjeu_eur] ), ml_anomalies_tarif[anomalie] = TRUE (), ml_anomalies_tarif[ecart] > 0 )"),
+    ("Demandée (ligne) %", "10. Prévisions ML", "+0.0%;-0.0%;0.0%", "Hausse demandée de la ligne.",
+     "AVERAGE ( ml_anomalies_tarif[demandee] )"),
+    ("Justifiée (ligne) %", "10. Prévisions ML", "+0.0%;-0.0%;0.0%", "Hausse justifiée de la ligne.",
+     "AVERAGE ( ml_anomalies_tarif[hausse_justifiee] )"),
     ("Conseil appro", "7. Alertes", "",
      "Conseil d'approvisionnement avant la prochaine campagne : baisse matière → limiter les achats et attendre le nouveau tarif ; hausse > 3 % → anticiper les achats avant le 1er janvier.",
      """VAR _p = [Plafond justifié prochaine campagne %]
@@ -940,6 +1023,36 @@ PAGES = [
                            m("Évol. volume %"): "Volume", m("Effet prix %"): "Effet prix", m("Surcoût prix €"): "Surcoût €"}},
           filtres=[(("c", "dim_date", "annee"), [2026])]),
     ]),
+    ("Prévisions", entete(
+        "Prévisions (machine learning)",
+        "Chaque modèle est testé sur le passé contre une référence naïve et n'est gardé que s'il la bat. Détail : docs/ml_rapport.md.") + [
+        tuile(20, 92, 300, 84, "Plafond 2027 projeté %", "Hausse justifiable 2027 projetée", cle=True),
+        v("card", 335, 92, 300, 84, {"Values": [m("Fourchette plafond 2027")]}, titre="Fourchette à 80 %", objets={"police": 14}),
+        tuile(650, 92, 300, 84, "Lignes anormales", "Lignes tarifaires anormales 2026"),
+        tuile(965, 92, 295, 84, "€ lignes anormales", "Écart sur ces lignes"),
+        segment(("c", "dim_matiere", "libelle"), 20, 190, w=240, titre="Matière", unique=True),
+        v("lineChart", 20, 262, 760, 200,
+          {"Category": [("c", "dim_date", "date")],
+           "Y": [m("Indice (composition)"), m("Prévision indice"), m("Prévision basse 80 %"), m("Prévision haute 80 %")]},
+          titre="Indice réel et prévision à 3 mois (fourchette à 80 %)", objets={"continu": True},
+          filtres=[(("c", "dim_date", "annee"), [2025, 2026])]),
+        v("tableEx", 800, 190, 460, 272,
+          {"Values": [("c", "dim_matiere", "libelle"), m("Variation 2027 attendue %"), m("Fourchette 2027")]},
+          titre="Variation matière attendue pour la campagne 2027", ordre=(m("Variation 2027 attendue %"), 2),
+          objets={"noms": {("c", "dim_matiere", "libelle"): "Matière", m("Variation 2027 attendue %"): "Attendue",
+                           m("Fourchette 2027"): "Fourchette 80 %"}}),
+        v("tableEx", 20, 476, 560, 224,
+          {"Values": [FOURN, m("Segment ML"), m("Écart moyen 3 campagnes (pts)"), m("Plafond 2027 projeté %")]},
+          titre="Segments de comportement (KMeans) · clic droit → Extraire → Fiche", ordre=(m("Écart moyen 3 campagnes (pts)"), 2),
+          objets={"noms": {FOURN: "Fournisseur", m("Segment ML"): "Segment", m("Écart moyen 3 campagnes (pts)"): "Écart moyen",
+                           m("Plafond 2027 projeté %"): "Plafond 2027"}}),
+        v("tableEx", 600, 476, 660, 224,
+          {"Values": [("c", "dim_article", "designation"), FOURN, m("Demandée (ligne) %"), m("Justifiée (ligne) %"), m("€ lignes anormales")]},
+          titre="Lignes tarifaires anormales (Isolation Forest) · à vérifier en priorité", ordre=(m("€ lignes anormales"), 2),
+          objets={"noms": {("c", "dim_article", "designation"): "Article", FOURN: "Fournisseur",
+                           m("Demandée (ligne) %"): "Demandée", m("Justifiée (ligne) %"): "Justifiée", m("€ lignes anormales"): "Écart €"}},
+          filtres=[(("c", "ml_anomalies_tarif", "anomalie"), [True])]),
+    ]),
     ("Fiche négociation", entete(
         "Fiche négociation",
         "Tout pour préparer le rendez-vous : chiffres, argument matière, historique et contre-proposition chiffrée.") + [
@@ -979,18 +1092,23 @@ PAGES = [
 LARGEUR_NAV = 200
 # Ordre de navigation : le parcours de négociation, puis les pages de détail
 ORDRE = ["Parcours négociation", "Synthèse campagne", "Alertes matières", "Fournisseurs", "Fiche négociation",
-         "Prix & volumes", "Détail article", "Matières", "Rattachement"]
+         "Prix & volumes", "Prévisions", "Détail article", "Matières", "Rattachement"]
 PAGES.sort(key=lambda p: ORDRE.index(p[0]))
-ICONES = ["➜", "◉", "⚑", "◎", "✎", "€", "▤", "≋", "⇄"]
+ICONES = ["➜", "◉", "⚑", "◎", "✎", "€", "◷", "▤", "≋", "⇄"]
 COURT = {"Parcours négociation": "Parcours"}  # libellés de navigation raccourcis
 # Pages cibles d'extraction (clic droit → Extraire) : champ transmis
 EXTRACTION = {"Fiche négociation": ("dim_fournisseur", "nom"), "Détail article": ("dim_article", "designation")}
 
 
-def section_config(i: int, nom: str) -> tuple[str, str]:
+def section_config(i: int, nom: str, visuels=None) -> tuple[str, str]:
     fond_page = {"background": [{"properties": {"color": {"solid": {"color": lit(FOND)}}, "transparency": lit(0)}}],
                  "outspace": [{"properties": {"color": {"solid": {"color": lit(FOND)}}, "transparency": lit(0)}}]}
     cfg: dict = {"objects": fond_page}
+    if visuels is not None:
+        RELATIONS_PAGE.clear()
+        sans_interaction([visuel(i, j, d) for j, d in enumerate(barre_navigation(i) + [recaler(x) for x in visuels])])
+        if RELATIONS_PAGE:
+            cfg["relationships"] = list(RELATIONS_PAGE)
     filtres = []
     if nom in EXTRACTION:
         t, c = EXTRACTION[nom]
@@ -1050,9 +1168,9 @@ THEME = {
 
 
 NAV = ["Parcours négociation", "Synthèse campagne", "Alertes matières", "Fournisseurs", "Prix & volumes",
-       "Fiche négociation", "Matières", "Rattachement"]  # Détail article : par extraction uniquement
+       "Prévisions", "Fiche négociation", "Matières", "Rattachement"]  # Détail article : par extraction uniquement
 NAV_COURT = {"Parcours négociation": "Parcours", "Synthèse campagne": "Synthèse", "Alertes matières": "Alertes",
-             "Fournisseurs": "Fournisseurs", "Prix & volumes": "Prix & volumes", "Fiche négociation": "Négocier",
+             "Fournisseurs": "Fournisseurs", "Prix & volumes": "Prix & vol.", "Prévisions": "Prévisions", "Fiche négociation": "Négocier",
              "Matières": "Matières", "Rattachement": "Rattachement"}
 
 
@@ -1351,6 +1469,30 @@ def visuel(page: int, i: int, d: dict) -> dict:
             "config": json.dumps(config, ensure_ascii=False), "filters": json.dumps(filtres, ensure_ascii=False)}
 
 
+# Visuels qui ne doivent pas être filtrés par un segment de la même page : (en-tête du segment, début du titre cible)
+SANS_INTERACTION = [("Matière", "Variation matière attendue")]
+
+
+def sans_interaction(conteneurs: list[dict]) -> list[dict]:
+    """Coupe l'interaction segment → visuel listée dans SANS_INTERACTION (stockée dans la config du segment)."""
+    cfgs = [json.loads(c["config"]) for c in conteneurs]
+    def titre(c):
+        t = c["singleVisual"].get("vcObjects", {}).get("title", [{}])[0].get("properties", {}).get("text")
+        return t["expr"]["Literal"]["Value"].strip("'") if t else ""
+    def entete(c):
+        h = c["singleVisual"].get("objects", {}).get("header", [{}])[0].get("properties", {}).get("text")
+        return h["expr"]["Literal"]["Value"].strip("'") if h else ""
+    for src, cible in SANS_INTERACTION:
+        s = next((c for c in cfgs if c["singleVisual"]["visualType"] == "slicer" and entete(c) == src), None)
+        t = next((c for c in cfgs if titre(c).startswith(cible)), None)
+        if s and t:
+            RELATIONS_PAGE.append({"source": s["name"], "target": t["name"], "type": 3})
+    return conteneurs
+
+
+RELATIONS_PAGE: list[dict] = []
+
+
 def ecrire(chemin: Path, texte: str) -> None:
     chemin.parent.mkdir(parents=True, exist_ok=True)
     chemin.write_text(texte if texte.endswith("\n") else texte + "\n", encoding="utf-8", newline="\n")
@@ -1427,7 +1569,7 @@ def construire(dossier_donnees: str) -> None:
 
     # Rapport : format report.json
     sections = [{
-        "config": section_config(i, p)[0], "displayName": p, "displayOption": 1, "filters": section_config(i, p)[1],
+        "config": section_config(i, p, visuels)[0], "displayName": p, "displayOption": 1, "filters": section_config(i, p)[1],
         **({"visibility": 1} if p == "Détail article" else {}),
         "height": 720.0 + HAUT, "name": f"ReportSection{i:02d}", "ordinal": i,
         "visualContainers": [visuel(i, j, d) for j, d in

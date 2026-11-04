@@ -2,7 +2,7 @@
 
 Généré par `scripts/export_dictionary.py` depuis le modèle TMDL (`pbip/BuyveraBI.SemanticModel`). Ne pas modifier à la main.
 
-18 tables · 86 colonnes · 64 mesures · 16 relations · 2 rôles
+23 tables · 116 colonnes · 80 mesures · 22 relations · 2 rôles
 
 ## Sommaire
 
@@ -20,6 +20,11 @@ Généré par `scripts/export_dictionary.py` depuis le modèle TMDL (`pbip/Buyve
 - [fact_indice](#fact_indice) — Indices matières mensuels réels (INSEE BDM) et série d'hypothèse non matière à 2 %/an.
 - [fact_indice_fournisseur](#fact_indice_fournisseur) — Précalcul : indice mensuel par fournisseur (base 100 = tarif 2023) du prix fournisseur et du coût matière de son panier. L'écart montre le décalage de répercussion.
 - [fact_tarif](#fact_tarif) — Prix brut public par article et par campagne tarifaire (synthétique).
+- [ml_anomalies_tarif](#ml_anomalies_tarif) — Machine learning (scripts/ml_predictions.py) : lignes du tarif 2026 isolées par Isolation Forest (hausse atypique pour sa famille).
+- [ml_plafond_2027](#ml_plafond_2027) — Machine learning (scripts/ml_predictions.py) : plafond de hausse justifiable 2027 projeté par fournisseur (central et fourchette à 80 %).
+- [ml_prevision_indices](#ml_prevision_indices) — Machine learning (scripts/ml_predictions.py) : prévision des indices matières octobre-décembre 2026 (modèle retenu au backtest) et intervalle à 80 %.
+- [ml_segments_fournisseurs](#ml_segments_fournisseurs) — Machine learning (scripts/ml_predictions.py) : segment de comportement tarifaire trouvé par KMeans (non supervisé).
+- [ml_variation_2027](#ml_variation_2027) — Machine learning (scripts/ml_predictions.py) : variation matière attendue pour la campagne 2027, fenêtre juillet-décembre 2026 complétée par la prévision.
 - [param_campagne](#param_campagne) — Campagne N+1 analysée (comparée à la campagne N = N+1 − 1). Table déconnectée pour le segment.
 - [param_decalage](#param_decalage) — Décalage d'application : nombre de mois entre l'évolution du cours matière et sa répercussion dans le tarif.
 - [param_fenetre](#param_fenetre) — Période de référence de la variation matière, en mois avant chaque campagne.
@@ -47,6 +52,12 @@ Toutes de plusieurs vers un, filtrage dans un seul sens.
 | `fact_impact_matiere.matiere_id` | `dim_matiere.matiere_id` |
 | `fact_indice_fournisseur.fournisseur_id` | `dim_fournisseur.fournisseur_id` |
 | `fact_indice_fournisseur.date` | `dim_date.date` |
+| `ml_prevision_indices.matiere_id` | `dim_matiere.matiere_id` |
+| `ml_prevision_indices.date` | `dim_date.date` |
+| `ml_variation_2027.matiere` | `dim_matiere.matiere_id` |
+| `ml_plafond_2027.fournisseur_id` | `dim_fournisseur.fournisseur_id` |
+| `ml_segments_fournisseurs.fournisseur_id` | `dim_fournisseur.fournisseur_id` |
+| `ml_anomalies_tarif.article_id` | `dim_article.article_id` |
 
 ## Sécurité par ligne
 
@@ -68,6 +79,24 @@ Toutes de plusieurs vers un, filtrage dans un seul sens.
 | € renégociables | `#,0 €` | Σ par article de MAX(0, hausse demandée − hausse justifiée) × prix N × volume N. |
 | Nb articles comparables | `#,0` | Articles du panier comparable N / N+1. |
 | Effet cliquet | `0` | Nombre de campagnes où la hausse justifiée est négative alors que la hausse demandée ne l'est pas. |
+
+### 10. Prévisions ML
+
+| Mesure | Format | Description |
+|---|---|---|
+| Prévision indice | `#,0.0` | Indice prévu par le modèle retenu au backtest. |
+| Prévision basse 80 % | `#,0.0` | Borne basse de l'intervalle à 80 %. |
+| Prévision haute 80 % | `#,0.0` | Borne haute de l'intervalle à 80 %. |
+| Variation 2027 attendue % | `+0.0%;-0.0%;0.0%` | Variation matière attendue pour 2027 (fenêtre juillet-décembre 2026 complétée par la prévision). |
+| Fourchette 2027 | `` | Fourchette à 80 % de la variation 2027 attendue. |
+| Plafond 2027 projeté % | `+0.0%;-0.0%;0.0%` | Hausse justifiable 2027 projetée, pondérée par prix 2026 × volume 2025. |
+| Fourchette plafond 2027 | `` | Fourchette à 80 % du plafond 2027 projeté. |
+| Segment ML | `` | Segment de comportement tarifaire du fournisseur (KMeans). |
+| Écart moyen 3 campagnes (pts) | `+0.0;-0.0;0.0` | Écart moyen demandé − justifié sur 3 campagnes. |
+| Lignes anormales | `#,0` | Lignes du tarif 2026 isolées en hausse excessive. |
+| € lignes anormales | `#,0 €` | Écart en euros des lignes isolées en hausse excessive. |
+| Demandée (ligne) % | `+0.0%;-0.0%;0.0%` | Hausse demandée de la ligne. |
+| Justifiée (ligne) % | `+0.0%;-0.0%;0.0%` | Hausse justifiée de la ligne. |
 
 ### 2. Matières
 
@@ -122,6 +151,9 @@ Toutes de plusieurs vers un, filtrage dans un seul sens.
 | Levier matière | `` | Matière du panier du fournisseur qui a le plus baissé sur la fenêtre : argument de négociation. |
 | Commentaire négociation | `` | Phrase de synthèse générée pour le fournisseur sélectionné (support de négociation). |
 | Couleur variation | `` | Vert marque si la matière baisse (levier acheteur), ambre signal si elle monte. |
+| Résumé signaux | `` | Nombre de matières en hausse et en baisse sur 3 mois. |
+| Résumé cible | `` | Nombre de fournisseurs à renégocier, en clair. |
+| Résumé 2027 | `` | Hausse déjà justifiée pour la prochaine campagne, en clair. |
 | Nb fournisseurs à renégocier | `0` | Fournisseurs dont l'écart dépasse 3 points. |
 
 ### 7. Alertes
@@ -137,7 +169,7 @@ Toutes de plusieurs vers un, filtrage dans un seul sens.
 | Plafond justifié prochaine campagne % | `+0.0%;-0.0%;0.0%` | Hausse que les matières justifient déjà pour la prochaine campagne, sur le tarif en vigueur pondéré par les volumes : au-delà, la demande est contestable. |
 | Impact € prochaine campagne | `#,0 €` | Surcoût que les matières justifient déjà pour la prochaine campagne (Σ part × variation acquise × prix × volume). Si une matière est sélectionnée, seule sa contribution est comptée : articles impactés par cette matière. |
 | Volume annuel | `#,0` | Quantité achetée sur la dernière année complète. |
-| Action fournisseur | `` | Action recommandée selon le plafond justifié de la prochaine campagne : baisse → convoquer le commercial du fournisseur, hausse > 2 % → préparer la défense, sinon suivi. |
+| Action fournisseur | `` | Action recommandée selon le plafond justifié de la prochaine campagne : baisse → convoquer le fournisseur, hausse > 2 % → préparer la défense, sinon suivi. |
 | Couleur action | `` | Vert = baisse à obtenir, rouge = hausse à cadrer, gris = suivi. |
 | Prochaine campagne | `0` | Campagne à venir (dernière campagne + 1). |
 | Argument anticipé | `` | Phrase d'anticipation : plafond de hausse défendable pour la prochaine campagne, avant réception du tarif. |
@@ -339,6 +371,71 @@ Prix brut public par article et par campagne tarifaire (synthétique).
 | `campagne` | int64 | oui | Campagne tarifaire (année d'effet). |
 | `date_effet` | dateTime | non | Date d'effet du tarif (1er janvier). |
 | `prix_brut` | double | oui | Prix brut public en euros. Vide si la ligne tarif est arrivée sans prix. |
+
+### ml_anomalies_tarif
+
+Machine learning (scripts/ml_predictions.py) : lignes du tarif 2026 isolées par Isolation Forest (hausse atypique pour sa famille).
+
+| Colonne | Type | Visible | Description |
+|---|---|---|---|
+| `article_id` | string | non | Article. |
+| `fournisseur_id` | string | non | Fournisseur. |
+| `demandee` | double | non | Hausse demandée de la ligne. |
+| `hausse_justifiee` | double | non | Hausse justifiée de la ligne. |
+| `ecart` | double | non | Écart. |
+| `score_anomalie` | double | non | Score d'anomalie (plus haut = plus atypique). |
+| `anomalie` | boolean | oui | Vrai si la ligne est isolée. |
+| `enjeu_eur` | double | non | Écart positif × prix N × volume N. |
+
+### ml_plafond_2027
+
+Machine learning (scripts/ml_predictions.py) : plafond de hausse justifiable 2027 projeté par fournisseur (central et fourchette à 80 %).
+
+| Colonne | Type | Visible | Description |
+|---|---|---|---|
+| `fournisseur_id` | string | non | Fournisseur. |
+| `poids` | double | non | Prix 2026 × volume 2025 du panier. |
+| `plafond_central` | double | non | Plafond projeté. |
+| `plafond_bas` | double | non | Borne basse. |
+| `plafond_haut` | double | non | Borne haute. |
+
+### ml_prevision_indices
+
+Machine learning (scripts/ml_predictions.py) : prévision des indices matières octobre-décembre 2026 (modèle retenu au backtest) et intervalle à 80 %.
+
+| Colonne | Type | Visible | Description |
+|---|---|---|---|
+| `matiere_id` | string | non | Matière. |
+| `date` | dateTime | non | Mois prévu (1er du mois). |
+| `horizon_mois` | int64 | non | Mois d'avance. |
+| `prevision` | double | non | Indice prévu. |
+| `bas_80` | double | non | Borne basse à 80 %. |
+| `haut_80` | double | non | Borne haute à 80 %. |
+| `modele` | string | oui | Modèle retenu (le naïf si aucun ne le bat). |
+
+### ml_segments_fournisseurs
+
+Machine learning (scripts/ml_predictions.py) : segment de comportement tarifaire trouvé par KMeans (non supervisé).
+
+| Colonne | Type | Visible | Description |
+|---|---|---|---|
+| `fournisseur_id` | string | non | Fournisseur. |
+| `segment_nom` | string | oui | Segment trouvé : aligné, opportuniste, cliquet, références instables. |
+| `ecart_moyen` | double | non | Écart moyen demandé − justifié sur 3 campagnes. |
+| `ecart_regularite` | double | non | Écart-type de l'écart. |
+| `part_cliquet` | double | non | Part des campagnes en effet cliquet. |
+| `rattachement_auto` | double | non | Taux de rattachement automatique. |
+
+### ml_variation_2027
+
+Machine learning (scripts/ml_predictions.py) : variation matière attendue pour la campagne 2027, fenêtre juillet-décembre 2026 complétée par la prévision.
+
+| Colonne | Type | Visible | Description |
+|---|---|---|---|
+| `matiere` | string | non | Matière. |
+| `variation_centrale` | double | non | Variation centrale. |
+| `variation_basse` | double | non | Borne basse à 80 %. |
+| `variation_haute` | double | non | Borne haute à 80 %. |
 
 ### param_campagne
 

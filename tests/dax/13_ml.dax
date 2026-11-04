@@ -1,0 +1,10 @@
+EVALUATE
+ROW (
+    "plafond_2027_projete", [Plafond 2027 projeté %],
+    "fourchette", [Fourchette plafond 2027],
+    "lignes_anormales", [Lignes anormales],
+    "eur_anormal", [€ lignes anormales],
+    "var_cuivre", CALCULATE ( [Variation 2027 attendue %], dim_matiere[matiere_id] = "CU" ),
+    "prev_cuivre_dec", CALCULATE ( [Prévision indice], dim_matiere[matiere_id] = "CU", dim_date[date] = DATE ( 2026, 12, 1 ) ),
+    "segment_orlenza", CALCULATE ( [Segment ML], dim_fournisseur[nom] = "Orlenza Thermique" )
+)

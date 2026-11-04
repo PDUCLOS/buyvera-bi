@@ -1,0 +1,65 @@
+/// Machine learning (scripts/ml_predictions.py) : plafond de hausse justifiable 2027 projeté par fournisseur (central et fourchette à 80 %).
+table ml_plafond_2027
+	lineageTag: 97f60294-0c02-5e36-b27a-924fab9266ad
+
+	/// Fournisseur.
+	column fournisseur_id
+		dataType: string
+		isHidden
+		lineageTag: bb9effde-a40e-563f-8682-a93c263c7981
+		summarizeBy: none
+		sourceColumn: fournisseur_id
+
+		annotation SummarizationSetBy = User
+
+	/// Prix 2026 × volume 2025 du panier.
+	column poids
+		dataType: double
+		isHidden
+		lineageTag: 475c0223-7d4e-5139-942d-21eb4ef032b1
+		summarizeBy: none
+		sourceColumn: poids
+
+		annotation SummarizationSetBy = User
+
+	/// Plafond projeté.
+	column plafond_central
+		dataType: double
+		isHidden
+		lineageTag: bd0d212e-36d6-56b2-ba98-c426b89b1f4a
+		summarizeBy: none
+		sourceColumn: plafond_central
+
+		annotation SummarizationSetBy = User
+
+	/// Borne basse.
+	column plafond_bas
+		dataType: double
+		isHidden
+		lineageTag: b2b16db7-e44a-5612-9039-0eef61b15e4c
+		summarizeBy: none
+		sourceColumn: plafond_bas
+
+		annotation SummarizationSetBy = User
+
+	/// Borne haute.
+	column plafond_haut
+		dataType: double
+		isHidden
+		lineageTag: 1665e79a-658d-56e4-8a1a-fa99869a902b
+		summarizeBy: none
+		sourceColumn: plafond_haut
+
+		annotation SummarizationSetBy = User
+
+	partition ml_plafond_2027 = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document ( File.Contents ( DossierDonnees & "ml_plafond_2027.csv" ), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv] ),
+				    Entetes = Table.PromoteHeaders ( Source, [PromoteAllScalars = true] ),
+				    Types = Table.TransformColumnTypes ( Entetes, {{"fournisseur_id", type text}, {"poids", type number}, {"plafond_central", type number}, {"plafond_bas", type number}, {"plafond_haut", type number}}, "en-US" )
+				in
+				    Types
+
+	annotation PBI_ResultType = Table

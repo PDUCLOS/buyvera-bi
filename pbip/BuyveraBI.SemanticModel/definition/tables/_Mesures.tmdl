@@ -688,6 +688,92 @@ table _Mesures
 		displayFolder: 6. Négociation
 		lineageTag: 748c7598-d040-5266-a694-d354a2441d08
 
+	/// Indice prévu par le modèle retenu au backtest.
+	measure 'Prévision indice' = AVERAGE ( ml_prevision_indices[prevision] )
+		formatString: #,0.0
+		displayFolder: 10. Prévisions ML
+		lineageTag: a83fe477-6acb-5c92-8df7-1b136f79ffa9
+
+	/// Borne basse de l'intervalle à 80 %.
+	measure 'Prévision basse 80 %' = AVERAGE ( ml_prevision_indices[bas_80] )
+		formatString: #,0.0
+		displayFolder: 10. Prévisions ML
+		lineageTag: 4cb56fd5-c20d-53f5-9896-38572edf9802
+
+	/// Borne haute de l'intervalle à 80 %.
+	measure 'Prévision haute 80 %' = AVERAGE ( ml_prevision_indices[haut_80] )
+		formatString: #,0.0
+		displayFolder: 10. Prévisions ML
+		lineageTag: 71a137cb-4727-512d-aec6-8a2cf68c460a
+
+	/// Variation matière attendue pour 2027 (fenêtre juillet-décembre 2026 complétée par la prévision).
+	measure 'Variation 2027 attendue %' = AVERAGE ( ml_variation_2027[variation_centrale] )
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: 10. Prévisions ML
+		lineageTag: 36e8488c-f764-5f18-a4df-ecfb3b245914
+
+	/// Fourchette à 80 % de la variation 2027 attendue.
+	measure 'Fourchette 2027' = ```
+			VAR _b = AVERAGE ( ml_variation_2027[variation_basse] )
+			VAR _h = AVERAGE ( ml_variation_2027[variation_haute] )
+			RETURN
+			    IF ( NOT ISBLANK ( _b ), FORMAT ( _b, "+0.0 %;-0.0 %" ) & " à " & FORMAT ( _h, "+0.0 %;-0.0 %" ) )
+			```
+		displayFolder: 10. Prévisions ML
+		lineageTag: dbe4ee6d-c321-5f38-8258-16837509e700
+
+	/// Hausse justifiable 2027 projetée, pondérée par prix 2026 × volume 2025.
+	measure 'Plafond 2027 projeté %' = DIVIDE ( SUMX ( ml_plafond_2027, ml_plafond_2027[poids] * ml_plafond_2027[plafond_central] ), SUM ( ml_plafond_2027[poids] ) )
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: 10. Prévisions ML
+		lineageTag: 20245ac0-4530-540f-bef9-39e10667dc21
+
+	/// Fourchette à 80 % du plafond 2027 projeté.
+	measure 'Fourchette plafond 2027' = ```
+			VAR _w = SUM ( ml_plafond_2027[poids] )
+			VAR _b = DIVIDE ( SUMX ( ml_plafond_2027, ml_plafond_2027[poids] * ml_plafond_2027[plafond_bas] ), _w )
+			VAR _h = DIVIDE ( SUMX ( ml_plafond_2027, ml_plafond_2027[poids] * ml_plafond_2027[plafond_haut] ), _w )
+			RETURN
+			    IF ( NOT ISBLANK ( _b ), FORMAT ( _b, "+0.0 %;-0.0 %" ) & " à " & FORMAT ( _h, "+0.0 %;-0.0 %" ) )
+			```
+		displayFolder: 10. Prévisions ML
+		lineageTag: 0996f5ef-4ed6-514f-b970-f0051241d690
+
+	/// Segment de comportement tarifaire du fournisseur (KMeans).
+	measure 'Segment ML' = SELECTEDVALUE ( ml_segments_fournisseurs[segment_nom] )
+		displayFolder: 10. Prévisions ML
+		lineageTag: 680d39da-ebd6-51c4-aa52-348c86ffec02
+
+	/// Écart moyen demandé − justifié sur 3 campagnes.
+	measure 'Écart moyen 3 campagnes (pts)' = AVERAGE ( ml_segments_fournisseurs[ecart_moyen] ) * 100
+		formatString: +0.0;-0.0;0.0
+		displayFolder: 10. Prévisions ML
+		lineageTag: 9dd94ac2-ebf5-58f0-84d4-2cfaccd4824d
+
+	/// Lignes du tarif 2026 isolées en hausse excessive.
+	measure 'Lignes anormales' = CALCULATE ( COUNTROWS ( ml_anomalies_tarif ), ml_anomalies_tarif[anomalie] = TRUE (), ml_anomalies_tarif[ecart] > 0 )
+		formatString: #,0
+		displayFolder: 10. Prévisions ML
+		lineageTag: fcdcbef0-af7a-5b4f-8409-b78539562e66
+
+	/// Écart en euros des lignes isolées en hausse excessive.
+	measure '€ lignes anormales' = CALCULATE ( SUM ( ml_anomalies_tarif[enjeu_eur] ), ml_anomalies_tarif[anomalie] = TRUE (), ml_anomalies_tarif[ecart] > 0 )
+		formatString: #,0 €
+		displayFolder: 10. Prévisions ML
+		lineageTag: bc402086-1e66-5f77-8c02-ed401120ee24
+
+	/// Hausse demandée de la ligne.
+	measure 'Demandée (ligne) %' = AVERAGE ( ml_anomalies_tarif[demandee] )
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: 10. Prévisions ML
+		lineageTag: 2e1405d1-6e38-5e5a-8d5e-f95dd4449e82
+
+	/// Hausse justifiée de la ligne.
+	measure 'Justifiée (ligne) %' = AVERAGE ( ml_anomalies_tarif[hausse_justifiee] )
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: 10. Prévisions ML
+		lineageTag: e4e541f1-f901-5893-8280-6ad4da026b36
+
 	/// Conseil d'approvisionnement avant la prochaine campagne : baisse matière → limiter les achats et attendre le nouveau tarif ; hausse > 3 % → anticiper les achats avant le 1er janvier.
 	measure 'Conseil appro' = ```
 			VAR _p = [Plafond justifié prochaine campagne %]

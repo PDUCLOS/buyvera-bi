@@ -66,6 +66,20 @@ Schéma du pipeline : [`docs/pipeline_buyvera.drawio`](docs/pipeline_buyvera.dra
 - **Documentation** : chaque table, colonne et mesure a sa description dans le TMDL, exportée dans
   [`docs/dictionnaire.md`](docs/dictionnaire.md).
 
+## Machine learning : ce que l'historique permet de prédire
+
+`scripts/ml_predictions.py`, résultats dans [`docs/ml_rapport.md`](docs/ml_rapport.md) et sur la page **Prévisions** du rapport.
+Chaque modèle est testé sur un backtest chronologique contre une référence naïve, et n'est gardé que s'il la bat.
+
+| Cas d'usage | Données | Résultat du backtest | Usage acheteur |
+|---|---|---|---|
+| Indices matières à 1-6 mois | INSEE, réelles | LightGBM et lissage **ne battent pas** le naïf (erreur 4,2 % à 1 mois, 11,4 % à 6 mois) : le naïf est retenu, avec une fourchette tirée des erreurs passées | plafond 2027 projeté **+11,3 %** (+8,3 à +14,8 %) |
+| Volumes mensuels par famille | fictives | Holt-Winters 7,3 % d'erreur contre 9,0 % pour le naïf saisonnier | quantités à anticiper avant la hausse |
+| Segmentation fournisseurs | fictives | KMeans retrouve les 4 comportements injectés (indice de Rand 1,0) | cibler les opportunistes et les cliquets |
+| Lignes tarifaires anormales | fictives | Isolation Forest : 90 % des lignes signalées chez les opportunistes (33 % des lignes) | 42 lignes, 62 k€ à vérifier en priorité |
+
+Le résultat le plus utile est le premier : sur des cours de métaux, aucun modèle ne prévoit mieux que « le mois prochain ressemble au dernier ». L'outil le dit, et donne une fourchette honnête plutôt qu'une fausse précision.
+
 ## Même analyse, deux outils
 
 Le volet 2 refait l'analyse en **tableau de bord Claude**, à partir des mêmes CSV. Les 5 chiffres clés sont

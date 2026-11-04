@@ -1,0 +1,55 @@
+/// Machine learning (scripts/ml_predictions.py) : variation matière attendue pour la campagne 2027, fenêtre juillet-décembre 2026 complétée par la prévision.
+table ml_variation_2027
+	lineageTag: 5034877d-03ce-5bf9-8855-f8f71fdf6faf
+
+	/// Matière.
+	column matiere
+		dataType: string
+		isHidden
+		lineageTag: c1688cc3-5ba2-57b5-b791-bd0b1108e1fd
+		summarizeBy: none
+		sourceColumn: matiere
+
+		annotation SummarizationSetBy = User
+
+	/// Variation centrale.
+	column variation_centrale
+		dataType: double
+		isHidden
+		lineageTag: 10a8584e-585e-5f6d-b4a5-f38fdd2c4ac8
+		summarizeBy: none
+		sourceColumn: variation_centrale
+
+		annotation SummarizationSetBy = User
+
+	/// Borne basse à 80 %.
+	column variation_basse
+		dataType: double
+		isHidden
+		lineageTag: 527d0e6b-6712-51d5-8b35-89b90b55e00e
+		summarizeBy: none
+		sourceColumn: variation_basse
+
+		annotation SummarizationSetBy = User
+
+	/// Borne haute à 80 %.
+	column variation_haute
+		dataType: double
+		isHidden
+		lineageTag: 83a35e30-d329-5028-a0ee-7e0e13f3de62
+		summarizeBy: none
+		sourceColumn: variation_haute
+
+		annotation SummarizationSetBy = User
+
+	partition ml_variation_2027 = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document ( File.Contents ( DossierDonnees & "ml_variation_2027.csv" ), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv] ),
+				    Entetes = Table.PromoteHeaders ( Source, [PromoteAllScalars = true] ),
+				    Types = Table.TransformColumnTypes ( Entetes, {{"matiere", type text}, {"variation_centrale", type number}, {"variation_basse", type number}, {"variation_haute", type number}}, "en-US" )
+				in
+				    Types
+
+	annotation PBI_ResultType = Table

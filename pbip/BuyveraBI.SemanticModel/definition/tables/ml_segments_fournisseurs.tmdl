@@ -1,0 +1,74 @@
+/// Machine learning (scripts/ml_predictions.py) : segment de comportement tarifaire trouvé par KMeans (non supervisé).
+table ml_segments_fournisseurs
+	lineageTag: 73225ce9-2fa7-51e9-91b5-f72f97ced747
+
+	/// Fournisseur.
+	column fournisseur_id
+		dataType: string
+		isHidden
+		lineageTag: 5290f912-9ab7-54fa-b118-b2fe8cb5920d
+		summarizeBy: none
+		sourceColumn: fournisseur_id
+
+		annotation SummarizationSetBy = User
+
+	/// Segment trouvé : aligné, opportuniste, cliquet, références instables.
+	column segment_nom
+		dataType: string
+		lineageTag: a237cef0-bdd8-5acd-a770-346328629030
+		summarizeBy: none
+		sourceColumn: segment_nom
+
+		annotation SummarizationSetBy = User
+
+	/// Écart moyen demandé − justifié sur 3 campagnes.
+	column ecart_moyen
+		dataType: double
+		isHidden
+		lineageTag: f06a00cd-ca87-5710-bbdf-234069794e38
+		summarizeBy: none
+		sourceColumn: ecart_moyen
+
+		annotation SummarizationSetBy = User
+
+	/// Écart-type de l'écart.
+	column ecart_regularite
+		dataType: double
+		isHidden
+		lineageTag: 98e9f693-fc25-515d-ba3c-46b49316b174
+		summarizeBy: none
+		sourceColumn: ecart_regularite
+
+		annotation SummarizationSetBy = User
+
+	/// Part des campagnes en effet cliquet.
+	column part_cliquet
+		dataType: double
+		isHidden
+		lineageTag: 18bb61fa-21c8-5959-a53d-0c920d852dac
+		summarizeBy: none
+		sourceColumn: part_cliquet
+
+		annotation SummarizationSetBy = User
+
+	/// Taux de rattachement automatique.
+	column rattachement_auto
+		dataType: double
+		isHidden
+		lineageTag: d6bf02cf-48c0-5afd-a936-2dee63854e56
+		summarizeBy: none
+		sourceColumn: rattachement_auto
+
+		annotation SummarizationSetBy = User
+
+	partition ml_segments_fournisseurs = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document ( File.Contents ( DossierDonnees & "ml_segments_fournisseurs.csv" ), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv] ),
+				    Entetes = Table.PromoteHeaders ( Source, [PromoteAllScalars = true] ),
+				    Types = Table.TransformColumnTypes ( Entetes, {{"fournisseur_id", type text}, {"segment_nom", type text}, {"ecart_moyen", type number}, {"ecart_regularite", type number}, {"part_cliquet", type number}, {"rattachement_auto", type number}}, "en-US" )
+				in
+				    Types
+
+	annotation PBI_ResultType = Table

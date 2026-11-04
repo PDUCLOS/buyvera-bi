@@ -1,0 +1,87 @@
+/// Machine learning (scripts/ml_predictions.py) : prévision des indices matières octobre-décembre 2026 (modèle retenu au backtest) et intervalle à 80 %.
+table ml_prevision_indices
+	lineageTag: 633116ce-6ad4-5433-ace8-3d4df0d6f83e
+
+	/// Matière.
+	column matiere_id
+		dataType: string
+		isHidden
+		lineageTag: 370e6113-b1e3-582b-a88e-d7db74dcd744
+		summarizeBy: none
+		sourceColumn: matiere_id
+
+		annotation SummarizationSetBy = User
+
+	/// Mois prévu (1er du mois).
+	column date
+		dataType: dateTime
+		formatString: Short Date
+		isHidden
+		lineageTag: 8435ac6e-a455-5755-85e3-e4e8d11dd697
+		summarizeBy: none
+		sourceColumn: date
+
+		annotation UnderlyingDateTimeDataType = Date
+
+		annotation SummarizationSetBy = User
+
+	/// Mois d'avance.
+	column horizon_mois
+		dataType: int64
+		isHidden
+		lineageTag: a19e523a-e306-58ac-a999-1b012d45bd37
+		summarizeBy: none
+		sourceColumn: horizon_mois
+
+		annotation SummarizationSetBy = User
+
+	/// Indice prévu.
+	column prevision
+		dataType: double
+		isHidden
+		lineageTag: 08e7e0d9-f744-549f-b3da-630cb4903653
+		summarizeBy: none
+		sourceColumn: prevision
+
+		annotation SummarizationSetBy = User
+
+	/// Borne basse à 80 %.
+	column bas_80
+		dataType: double
+		isHidden
+		lineageTag: 88552e17-06d0-535a-814e-993c10ea259f
+		summarizeBy: none
+		sourceColumn: bas_80
+
+		annotation SummarizationSetBy = User
+
+	/// Borne haute à 80 %.
+	column haut_80
+		dataType: double
+		isHidden
+		lineageTag: 9b40151f-d950-5910-9a99-c7a43d282e83
+		summarizeBy: none
+		sourceColumn: haut_80
+
+		annotation SummarizationSetBy = User
+
+	/// Modèle retenu (le naïf si aucun ne le bat).
+	column modele
+		dataType: string
+		lineageTag: b3534756-5a45-5dbf-9baf-16be521d0ffc
+		summarizeBy: none
+		sourceColumn: modele
+
+		annotation SummarizationSetBy = User
+
+	partition ml_prevision_indices = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document ( File.Contents ( DossierDonnees & "ml_prevision_indices.csv" ), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv] ),
+				    Entetes = Table.PromoteHeaders ( Source, [PromoteAllScalars = true] ),
+				    Types = Table.TransformColumnTypes ( Entetes, {{"matiere_id", type text}, {"date", type date}, {"horizon_mois", Int64.Type}, {"prevision", type number}, {"bas_80", type number}, {"haut_80", type number}, {"modele", type text}}, "en-US" )
+				in
+				    Types
+
+	annotation PBI_ResultType = Table
