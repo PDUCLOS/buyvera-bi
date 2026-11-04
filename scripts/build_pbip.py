@@ -408,7 +408,8 @@ VAR _refs = ADDCOLUMNS ( ALLSELECTED ( dim_article[designation] ), "@e", [€ re
 VAR _tot = SUMX ( _refs, [@e] )
 VAR _avant = SUMX ( FILTER ( _refs, [@e] > _cur ), [@e] )
 RETURN
-    IF ( _cur > 0, IF ( DIVIDE ( _avant, _tot ) < 0.8, "▲ À négocier en priorité", "Ensuite" ) )"""),
+    IF ( ISINSCOPE ( dim_article[designation] ) && _cur > 0,
+        IF ( DIVIDE ( _avant, _tot ) < 0.8, "▲ À négocier en priorité", "Ensuite" ) )"""),
     ("Références pour 80 % de l'enjeu", "13. 80/20", "#,0",
      "Nombre de références qui portent 80 % des € renégociables : celles à mettre sur la table en premier.",
      """VAR _refs = FILTER ( ADDCOLUMNS ( VALUES ( dim_article[designation] ), "@e", [€ renégociables] ), [@e] > 0 )

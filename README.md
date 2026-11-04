@@ -14,7 +14,7 @@ mesure ce que la négociation a vraiment rapporté.
 > **Dans le groupe, 624 k€ ont été payés au-dessus du meilleur prix d'un autre site. Sur trois campagnes, la négociation
 > a rapporté 524 k€, soit 51 % du potentiel chiffré.**
 
-🎬 Vidéo de présentation (70 s, vision achats) : [`docs/video/buyvera_promo.mp4`](docs/video/buyvera_promo.mp4)
+🎬 Vidéos (sans voix off, vision achats) : version longue pour un site, 2 min, [`docs/video/buyvera_site.mp4`](docs/video/buyvera_site.mp4) · version réseaux sociaux, verticale, 24 s, [`docs/video/buyvera_social.mp4`](docs/video/buyvera_social.mp4)
 
 Indices matières réels (INSEE), tarifs, volumes et fournisseurs fictifs. La logique métier vient de 20 ans de
 distribution industrielle (transmission mécanique et CVC).

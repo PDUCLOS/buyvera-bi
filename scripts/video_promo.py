@@ -1,6 +1,6 @@
-"""Vidéo promotionnelle Buyvera BI (vision métier achats) : 1920×1080, 30 i/s, sans voix off (VOIX = True pour l'ajouter).
+"""Vidéo longue Buyvera BI pour le site (vision métier achats) : 1920×1080, 30 i/s, ~1 min 50, sans voix off (VOIX = True pour l'ajouter).
 
-Usage : python scripts/video_promo.py → docs/video/buyvera_promo.mp4
+Usage : python scripts/video_promo.py → docs/video/buyvera_site.mp4 (version courte réseaux sociaux : scripts/video_social.py)
 Prérequis : pip install imageio-ffmpeg ; voix Windows « Microsoft Hortense » (System.Speech).
 Captures du rapport : docs/captures/*.png. Toutes les valeurs affichées sont celles du rapport (campagne 2026).
 """
@@ -18,7 +18,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 RACINE = Path(__file__).resolve().parents[1]
 CAPT = RACINE / "docs" / "captures"
-SORTIE = RACINE / "docs" / "video" / "buyvera_promo.mp4"
+SORTIE = RACINE / "docs" / "video" / "buyvera_site.mp4"  # version longue pour le site ; réseaux : video_social.py
 W, H, FPS = 1920, 1080, 30
 FONTS = Path("C:/Windows/Fonts")
 
@@ -274,8 +274,9 @@ def s_alertes(img, t, d):
     capture(img, "06_alertes_matieres.png", t, d, 760, 170, 1080, focus=(0.3, 0.25), zoom=0.1)
     texte(img, (90, 170), "Sachez avant", F_TITRE(60), BLANC, apparition(t, 0.2))
     texte(img, (90, 245), "le fournisseur", F_TITRE(60), AMBRE, apparition(t, 0.4))
-    pastille(img, (90, 400), "▼ Baisse : convoquer le fournisseur", VERT, apparition(t, 1.4), 30)
-    pastille(img, (90, 500), "▲ Hausse : anticiper les achats", ROUGE, apparition(t, 2.4), 30)
+    pastille(img, (90, 380), "▲ Hausse 3 et 12 mois : anticiper", ROUGE, apparition(t, 1.2), 28)
+    pastille(img, (90, 465), "▼ Baisse confirmée : convoquer", VERT, apparition(t, 1.9), 28)
+    pastille(img, (90, 550), "◆ Signal mixte : vérifier avant d'agir", (176, 138, 46), apparition(t, 2.6), 28)
     compteur(img, (90, 650), 11.2, pct, t, 3.6, "déjà justifiés pour 2027", AMBRE)
 
 
@@ -305,6 +306,38 @@ def s_gains(img, t, d):
     texte(img, (1320, 325), "ce que vous rapportez", F_TITRE(48), AMBRE, apparition(t, 0.5))
     compteur(img, (1320, 450), 524, lambda v: f"{v:,.0f} k€".replace(",", " "), t, 1.1, "économies obtenues en 3 campagnes", VERT)
     compteur(img, (1320, 690), 51, lambda v: f"{v:,.0f} %", t, 2.3, "du potentiel transformé en gains", MENTHE)
+
+
+def s_page8020(img, t, d):
+    capture(img, "13_references_8020.png", t, d, 760, 190, 1080, focus=(0.6, 0.4), zoom=0.08)
+    texte(img, (90, 220), "La liste est prête", F_TITRE(58), BLANC, apparition(t, 0.2))
+    texte(img, (90, 295), "dans le rapport", F_TITRE(58), AMBRE, apparition(t, 0.4))
+    for i, s_ in enumerate(["Références classées par enjeu", "Cumul de l'enjeu ligne à ligne", "« À négocier en priorité »",
+                            "Clic droit → détail de l'article"]):
+        a = apparition(t, 1.2 + i * 0.6)
+        texte(img, (90, 460 + i * 90), "✓", F_SYMB(44), VERT, a)
+        texte(img, (150, 464 + i * 90), s_, F_TEXTE(36), BLANC, a)
+
+
+def s_prixvol(img, t, d):
+    capture(img, "09_prix_volumes.png", t, d, 760, 190, 1080, focus=(0.5, 0.2), zoom=0.08)
+    texte(img, (90, 200), "Ce que la hausse", F_TITRE(58), BLANC, apparition(t, 0.2))
+    texte(img, (90, 275), "a vraiment coûté", F_TITRE(58), AMBRE, apparition(t, 0.4))
+    compteur(img, (90, 400), 1.3, pct, t, 1.0, "effet prix 2026, à volumes constants", AMBRE)
+    compteur(img, (90, 640), -3.8, pct, t, 2.2, "volumes vs 2025 à date", VERT)
+    texte(img, (90, 880), "Montant = volumes × prix × mix : tout est séparé", F_TEXTE(32), GRIS, apparition(t, 3.4))
+
+
+def s_previsions(img, t, d):
+    capture(img, "12_previsions.png", t, d, 760, 190, 1080, focus=(0.2, 0.2), zoom=0.08)
+    texte(img, (90, 200), "Budget de hausse 2027", F_TITRE(52), BLANC, apparition(t, 0.2))
+    texte(img, (90, 330), "+8,3 % à +14,8 %", F_CHIFFRE(88), AMBRE, apparition(t, 0.8))
+    texte(img, (90, 450), "fourchette à 80 % tirée du backtest", F_TEXTE(30), GRIS, apparition(t, 1.2))
+    for i, s_ in enumerate(["Chaque modèle testé contre un naïf", "Gardé seulement s'il le bat",
+                            "Sur les métaux, le naïf gagne : on le dit"]):
+        a = apparition(t, 2.0 + i * 0.7)
+        texte(img, (90, 580 + i * 80), "✓", F_SYMB(40), VERT, a)
+        texte(img, (150, 584 + i * 80), s_, F_TEXTE(34), BLANC, a)
 
 
 def s_rls(img, t, d):
@@ -356,14 +389,17 @@ SCENES = [
      "euros de plus par an, quand ses matières ne justifient que zéro virgule cinq : cent vingt mille euros à renégocier.", 7.5, s_synthese),
     ("Et pas besoin de tout négocier : trente-cinq références portent quatre-vingts pour cent de l'enjeu. "
      "On commence par elles.", 6.5, s_pareto),
+    ("La liste est prête dans le rapport, classée par enjeu.", 6.0, s_page8020),
     ("En un coup d'œil, vous voyez qui demande plus que ses matières ne le justifient.", 4.5, s_fournisseurs),
-    ("Les alertes matières vous préviennent avant le fournisseur. Une baisse ? On le convoque. "
+    ("Les alertes matières vous préviennent avant le fournisseur. Une baisse confirmée ? On le convoque. "
      "Une hausse ? On anticipe les achats. Pour 2027, les cours justifient déjà plus onze pour cent.", 6.5, s_alertes),
+    ("Année sur année, l'effet prix à volumes constants montre ce que la hausse a vraiment coûté.", 6.5, s_prixvol),
     ("Pour le rendez-vous, la fiche négociation rédige l'argument et chiffre la contre-proposition.", 5.0, s_fiche),
     ("Dans le groupe, un même article se paie trois prix. Six cent vingt-quatre mille euros au-dessus du meilleur prix, "
      "et soixante-douze mille euros de tarifs négociés mal appliqués dans les ERP.", 6.0, s_groupe),
     ("Et la négociation se mesure : cinq cent vingt-quatre mille euros obtenus en trois campagnes, "
      "la moitié du potentiel transformée.", 5.5, s_gains),
+    ("Pour 2027, le machine learning donne un budget de hausse, avec une fourchette honnête.", 7.0, s_previsions),
     ("Un parcours guidé, de l'alerte au rendez-vous. Chaque acheteur ne voit que son périmètre.", 4.0, s_rls),
     ("Négocier les baisses aussi vite que les hausses. Anticiper la campagne suivante. "
      "Prouver les gains, campagne après campagne.", 5.5, s_benefices),
@@ -372,7 +408,8 @@ SCENES = [
 FONDU = 0.35  # fondu au noir entre scènes, en secondes
 VOIX = False  # True : voix off Windows (Hortense) calée sur chaque scène
 # Durée de lecture de chaque scène sans voix off (secondes)
-DUREES_LECTURE = [4.5, 3.0, 6.5, 4.5, 7.5, 7.0, 5.0, 7.0, 5.5, 6.5, 6.0, 4.5, 5.5, 5.0]
+# Version site : rythme posé (lecture confortable de chaque plan)
+DUREES_LECTURE = [5.5, 3.5, 7.5, 5.5, 9.0, 8.0, 7.0, 6.0, 8.0, 8.0, 7.5, 7.5, 7.0, 8.5, 6.0, 7.0, 6.0]
 
 
 def voix(dossier: Path) -> list[Path]:
@@ -454,9 +491,9 @@ def main() -> None:
         print(f"scène {n + 1}/{len(SCENES)} : {d:.1f} s")
     proc.stdin.close()
     proc.wait()
-    planche = Image.new("RGB", (4 * 480, -(-len(vignettes) // 4) * 270), NAVY)
+    planche = Image.new("RGB", (5 * 384, -(-len(vignettes) // 5) * 216), NAVY)
     for i, v in enumerate(vignettes):
-        planche.paste(v.resize((480, 270)), ((i % 4) * 480, (i // 4) * 270))
+        planche.paste(v.resize((384, 216)), ((i % 5) * 384, (i // 5) * 216))
     planche.save(SORTIE.with_name("planche_contact.png"))
     vignettes[4].save(SORTIE.with_name("miniature.png"))
     print(f"{SORTIE} : {total:.1f} s, {SORTIE.stat().st_size / 1e6:.1f} Mo")

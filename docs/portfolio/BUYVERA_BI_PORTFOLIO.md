@@ -2,7 +2,7 @@
 
 > Projet Power BI de bout en bout : données, modèle, DAX, interface, machine learning et contrôle qualité.
 > Patrice Duclos · Data Analyst / BI · Lyon · novembre 2026
-> Code : [github.com/PDUCLOS/buyvera-bi](https://github.com/PDUCLOS/buyvera-bi) · Vidéo (70 s) : `video/buyvera_promo.mp4` dans ce dossier, ou [sur GitHub](https://github.com/PDUCLOS/buyvera-bi/blob/main/docs/video/buyvera_promo.mp4)
+> Code : [github.com/PDUCLOS/buyvera-bi](https://github.com/PDUCLOS/buyvera-bi) · Vidéos : `video/buyvera_site.mp4` (2 min, pour le site) et `video/buyvera_social.mp4` (24 s, verticale, réseaux sociaux)
 
 ![Buyvera BI](img/00_miniature.png)
 
@@ -169,11 +169,15 @@ Power BI reste la version industrialisée ; le tableau de bord Claude sert à pr
 
 ---
 
-## Vidéo de présentation
+## Vidéos de présentation
 
-70 secondes, sans voix off, vision métier achats : la lettre du fournisseur, la question, le parcours, les gains.
+Sans voix off, vision métier achats, sur un seul exemple (Orlenza Thermique) du début à la fin.
 
-![Planche de la vidéo](img/11_video_planche.png)
+- **Site (2 min, 16:9)** : la lettre du fournisseur, la hausse réelle sur les références et les volumes, le 80/20,
+  les alertes, la fiche négociation, les prix payés dans le groupe, les gains, le budget 2027.
+- **Réseaux sociaux (24 s, 9:16)** : un message toutes les deux secondes, lisible sans le son.
+
+![Planche de la vidéo site](img/11_video_planche.png)
 
 ---
 
